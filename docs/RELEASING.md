@@ -38,3 +38,5 @@ Dispatch never publishes a release. A tag must match the project version and poi
 The foundation is read-only and cannot access real accounts yet. Binaries are unsigned; Authenticode, Apple notarization and attestations are not configured. Checksums detect changes but are not publisher signatures.
 
 No provider credentials belong in builds or release artifacts.
+
+Release builds intentionally contain no Google or Microsoft app credentials. Each user imports their own Google Desktop client file and Microsoft client ID after extraction. Do not inject OAuth client secrets through GitHub environment variables or repository secrets: a value embedded in a desktop executable can be extracted. GitHub secrets are reserved for future code-signing material or other release infrastructure that never ships inside the package.

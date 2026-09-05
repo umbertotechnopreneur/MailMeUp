@@ -2,8 +2,8 @@
 
 🟩⬜⬜⬜⬜⬜⬜⬜ **12.5% verified · 87.5% awaiting verification or later work**
 
-**📍 Current focus:** Complete the provider registrations, then verify phases 2–5 with real accounts.
-**⏭️ Next action:** Finish both provider registrations, then validate account separation, mail search and calendar agenda with known examples. See the [restart checkpoint](../.github/tasks/resume.md).
+**📍 Current focus:** Connect the first Google test account and complete the Microsoft registration, then verify phases 2–5 with real accounts.
+**⏭️ Next action:** Complete one Google consent flow, confirm the granted read-only scopes, then validate account separation, mail search and calendar agenda with known examples. See the [restart checkpoint](../.github/tasks/resume.md).
 
 Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **1 of 8 phases**. Phases have equal weight; these percentages are status markers, not estimates of development time.
 
@@ -28,7 +28,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 ## 🟡 1. Prepare the pilot — 0% (0/3 complete)
 
 - ⚪ **1.1** Choose approved test accounts: two Google and two Microsoft accounts, covering personal and work accounts where available.
-- 🟡 **1.2** Set up the Google and Microsoft application registrations and check consent requirements for the selected testers. The Google Cloud project `mailmeup` exists; API, consent and client completion are still to be confirmed. Microsoft remains to be created.
+- 🟡 **1.2** Set up the Google and Microsoft application registrations and check consent requirements for the selected testers. The Google Desktop client file has been imported locally and its secret is protected by Windows. The Google Cloud APIs, external test audience and publishing state have not been independently verified. Microsoft remains to be created.
 - ⚪ **1.3** Choose a few messages and appointments with known results to verify later.
 
 **Ready when:** the pilot accounts and required read permissions are available. Any work-account restrictions are understood.

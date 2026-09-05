@@ -12,15 +12,16 @@
 - Public provider IDs are stored in `provider-settings.json`. Google client secrets and per-account tokens use protected slots; Microsoft uses a protected MSAL multi-account cache. SQLite stores non-secret account metadata and read categories.
 - Provider reads use short in-memory references, bounded text and coverage reporting. Release build, 16 tests, Windows protected storage and the seven-tool MCP smoke test pass locally.
 - The [MVP plan](../../docs/MVP_PLAN.md) and [app registration guide](../../docs/APP_REGISTRATION.md) are saved. Foundation validation recorded earlier does not validate future work.
-- The Google Cloud project `mailmeup` exists (project number `669810524015`). Gmail/Calendar API, OAuth consent and Desktop client completion still need confirmation. Microsoft registration remains pending. No account tokens or client credentials were obtained.
+- The Google Cloud project `mailmeup` exists (project number `669810524015`). Its Desktop client file was imported locally on 2026-09-05 and the protected-secret status is healthy. Gmail/Calendar API, external test audience and publishing state were not independently verified. Microsoft registration remains pending. No account token was obtained.
 - The provider setup/sign-in/read source, tests and dependency locks are committed locally. Real provider and clean Windows x64 checks remain.
 
 ## Resume here
 
-1. Finish the Google project configuration: enable Gmail and Calendar APIs, configure an external test audience and create a Desktop OAuth client. Download its JSON privately to `.local/google/client_secret.json`.
-2. Create the Microsoft public desktop registration for personal and work accounts and record its Application (client) ID.
-3. Connect one authorized test account at a time. Verify restart, identity separation, scope choices and local removal.
-4. Compare provider results with the known pilot messages and appointments. Keep all provider operations read-only. Google installed apps require a fresh consent flow when changing permissions.
+1. Confirm the Google project has Gmail and Calendar APIs enabled, remains External in Testing and lists the intended test users. Do not publish it.
+2. Connect one authorized Google test account and confirm the consent screen requests only the six documented identity, Gmail-read and Calendar-read scopes.
+3. Create the Microsoft public desktop registration for personal and work accounts and record its Application (client) ID.
+4. Connect one authorized test account at a time. Verify restart, identity separation, scope choices and local removal.
+5. Compare provider results with the known pilot messages and appointments. Keep all provider operations read-only. Google installed apps require a fresh consent flow when changing permissions.
 
 ## Working agreement
 
