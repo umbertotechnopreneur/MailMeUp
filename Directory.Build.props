@@ -16,6 +16,6 @@
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MailMeUpPortableBuild)' == 'true'">
-    <NuGetLockFilePath>$(MSBuildThisFileDirectory)eng/locks/$(RuntimeIdentifier)/$(MSBuildProjectName).json</NuGetLockFilePath>
+    <NuGetLockFilePath>$(MSBuildThisFileDirectory)eng/locks/$(MailMeUpPortableRuntime)/$(MSBuildProjectName).json</NuGetLockFilePath>
   </PropertyGroup>
 </Project>

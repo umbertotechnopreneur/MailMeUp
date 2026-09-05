@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_UI_LANGUAGE = 'en'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 [xml]$properties = Get-Content -LiteralPath (Join-Path $repoRoot 'Directory.Build.props')
-$version = $properties.Project.PropertyGroup.Version
+$version = $properties.SelectSingleNode('/Project/PropertyGroup/Version').InnerText
 $artifactRoot = Join-Path $repoRoot 'artifacts'
 $packageName = "mailmeup-$version-$Runtime"
 $payload = Join-Path $artifactRoot $packageName
@@ -27,11 +27,13 @@ try {
     $dirty = git status --porcelain --untracked-files=normal
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect Git state.' }
     if ($dirty) { throw 'Commit or move aside repository changes before packaging. Artifacts are ignored.' }
+    $runtimeLocks = Join-Path $repoRoot "eng/locks/$Runtime"
+    if (-not (Test-Path -LiteralPath (Join-Path $runtimeLocks 'MailMeUp.Cli.json'))) { throw 'Missing checked-in portable dependency graph.' }
 
     dotnet publish src/MailMeUp.Cli/MailMeUp.Cli.csproj -c Release -r $Runtime --self-contained true `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false `
         -p:DebugType=None -p:DebugSymbols=false -p:GenerateDocumentationFile=false `
-        -p:ContinuousIntegrationBuild=true -p:MailMeUpPortableBuild=true -p:RestoreLockedMode=true --output $payload
+        -p:ContinuousIntegrationBuild=true -p:MailMeUpPortableBuild=true "-p:MailMeUpPortableRuntime=$Runtime" -p:RestoreLockedMode=true --output $payload
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
 
     Copy-Item -LiteralPath LICENSE, THIRD_PARTY_NOTICES.md, docs/DEPENDENCIES.md -Destination $payload
