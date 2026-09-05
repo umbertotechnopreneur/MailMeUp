@@ -49,7 +49,7 @@ try {
         python scripts/smoke-test.py $executable
         if ($LASTEXITCODE -ne 0) { throw 'Published executable smoke test failed.' }
     }
-    "Version=$version`nRuntime=$Runtime`nCommit=$commit`nSmokeTest=$smokeStatus`nStage=foundation" |
+    "Version=$version`nRuntime=$Runtime`nCommit=$commit`nSmokeTest=$smokeStatus`nStage=read_only_mvp" |
         Set-Content -LiteralPath (Join-Path $payload 'BUILD_INFO.txt') -Encoding utf8NoBOM
 
     $extension = if ($IsWindows) { 'zip' } else { 'tar.gz' }

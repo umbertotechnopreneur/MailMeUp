@@ -17,14 +17,20 @@ public sealed class SqliteAccountStore(string directory) : IAccountStore
             return [];
         }
 
-        await using var connection = await OpenAsync(SqliteOpenMode.ReadOnly, cancellationToken);
+        await using var connection = await OpenAsync(SqliteOpenMode.ReadWrite, cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, provider, display_name, email_address FROM accounts ORDER BY id COLLATE BINARY";
+        command.CommandText = "SELECT id, provider, display_name, email_address, mail_read_enabled, calendar_read_enabled FROM accounts ORDER BY id COLLATE BINARY";
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var accounts = new List<Account>();
         while (await reader.ReadAsync(cancellationToken))
         {
-            accounts.Add(new(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3)));
+            accounts.Add(new(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(3),
+                reader.GetBoolean(4),
+                reader.GetBoolean(5)));
         }
 
         return accounts;
@@ -52,14 +58,38 @@ public sealed class SqliteAccountStore(string directory) : IAccountStore
         await using var connection = await OpenAsync(SqliteOpenMode.ReadWriteCreate, cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO accounts (id, provider, display_name, email_address) VALUES ($id, $provider, $name, $email)
-            ON CONFLICT(id) DO UPDATE SET provider = excluded.provider, display_name = excluded.display_name, email_address = excluded.email_address
+            INSERT INTO accounts (id, provider, display_name, email_address, mail_read_enabled, calendar_read_enabled)
+            VALUES ($id, $provider, $name, $email, $mail, $calendar)
+            ON CONFLICT(id) DO UPDATE SET
+                provider = excluded.provider,
+                display_name = excluded.display_name,
+                email_address = excluded.email_address,
+                mail_read_enabled = excluded.mail_read_enabled,
+                calendar_read_enabled = excluded.calendar_read_enabled
             """;
         command.Parameters.AddWithValue("$id", account.Id);
         command.Parameters.AddWithValue("$provider", account.Provider);
         command.Parameters.AddWithValue("$name", account.DisplayName);
         command.Parameters.AddWithValue("$email", account.EmailAddress);
+        command.Parameters.AddWithValue("$mail", account.MailReadEnabled);
+        command.Parameters.AddWithValue("$calendar", account.CalendarReadEnabled);
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DeleteAsync(string accountId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        if (!File.Exists(_databasePath))
+        {
+            return false;
+        }
+
+        await using var connection = await OpenAsync(SqliteOpenMode.ReadWrite, cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM accounts WHERE id = $id";
+        command.Parameters.AddWithValue("$id", accountId);
+        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
     }
 
     private async Task<SqliteConnection> OpenAsync(SqliteOpenMode mode, CancellationToken cancellationToken)
@@ -86,14 +116,27 @@ public sealed class SqliteAccountStore(string directory) : IAccountStore
                         id TEXT PRIMARY KEY NOT NULL,
                         provider TEXT NOT NULL,
                         display_name TEXT NOT NULL,
-                        email_address TEXT NOT NULL
+                        email_address TEXT NOT NULL,
+                        mail_read_enabled INTEGER NOT NULL DEFAULT 0,
+                        calendar_read_enabled INTEGER NOT NULL DEFAULT 0
                     );
-                    PRAGMA user_version = 1;
+                    PRAGMA user_version = 2;
                     COMMIT;
                     """;
                 await command.ExecuteNonQueryAsync(cancellationToken);
             }
-            else if (version != 1)
+            else if (version == 1 && mode != SqliteOpenMode.ReadOnly)
+            {
+                command.CommandText = """
+                    BEGIN IMMEDIATE;
+                    ALTER TABLE accounts ADD COLUMN mail_read_enabled INTEGER NOT NULL DEFAULT 0;
+                    ALTER TABLE accounts ADD COLUMN calendar_read_enabled INTEGER NOT NULL DEFAULT 0;
+                    PRAGMA user_version = 2;
+                    COMMIT;
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            else if (version != 2)
             {
                 throw new InvalidOperationException("Unsupported account database schema. Upgrade MailMeUp or select a new data directory.");
             }

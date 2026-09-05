@@ -15,6 +15,6 @@ For the practical steps and completion checks, see the [MVP delivery plan](MVP_P
 
 Each step needs working tests before it is advertised as available.
 
-The next implementation step is protected credential storage, followed by account sign-in. Calendar work must cover time zones, recurring meetings and all-day events.
+Read-only account setup, mail search and calendar agenda pass local automated checks. The next milestone is real-provider comparison, followed by clean-install packaging and a small pilot.
 
 No marketplace, web dashboard or hosted service is planned.

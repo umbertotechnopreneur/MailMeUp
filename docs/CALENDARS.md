@@ -1,10 +1,10 @@
 # Calendars and appointments
 
-**Planned, read-only.** Calendar access is not implemented yet.
+**Read-only source implementation with local automated coverage; real provider accounts still need verification.**
 
-MailMeUp will use Google Calendar for Google accounts and Microsoft Graph for Microsoft calendars. Existing account connections can be reused after the user grants calendar access.
+MailMeUp uses Google Calendar for Google accounts and Microsoft Graph for Microsoft calendars. An account must include calendar read consent.
 
-## What you will be able to ask
+## Example requests
 
 - "Show tomorrow's appointments across my work calendars."
 - "Find meetings with Alex next week."
@@ -22,6 +22,6 @@ If a calendar cannot be searched, MailMeUp must say so. A missing result must no
 
 No creating, editing or deleting appointments, sending invitations, changing attendees or replying to invitations. Those actions are outside the current read-only scope.
 
-Developer tools planned: `list_calendars`, `search_events`, `read_event`. See [the tool contract](MCP_CONTRACT.md).
+Current source tools: `list_calendars`, `search_events`, `read_event`. They still need build and real-provider checks. See [the tool contract](MCP_CONTRACT.md).
 
 API references: [Google Calendar](https://developers.google.com/workspace/calendar/api/v3/reference/events/list), [Microsoft calendar view](https://learn.microsoft.com/en-us/graph/api/calendar-list-calendarview?view=graph-rest-1.0).

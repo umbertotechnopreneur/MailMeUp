@@ -1,0 +1,106 @@
+namespace MailMeUp.Core;
+
+/// <summary>Requests a compact mail search across selected accounts or all mail-enabled accounts.</summary>
+public sealed record MailSearchRequest(
+    string Query,
+    IReadOnlyList<string>? AccountIds = null,
+    int Limit = 20,
+    string? Cursor = null,
+    string? Sender = null,
+    string? Start = null,
+    string? End = null);
+
+/// <summary>Provider-neutral mail criteria translated by each provider adapter.</summary>
+public sealed record ProviderMailQuery(
+    string Text,
+    string? Sender,
+    DateTimeOffset? Start,
+    DateTimeOffset? End);
+
+/// <summary>One short mail match suitable for an MCP response.</summary>
+public sealed record MailSearchItem(
+    string Reference,
+    string AccountId,
+    string Subject,
+    string Sender,
+    DateTimeOffset ReceivedAt,
+    string Preview);
+
+/// <summary>Identifies an account that could not be covered by a multi-account read.</summary>
+public sealed record AccountReadFailure(string AccountId, string Reason);
+
+/// <summary>Returns compact matches, search coverage and an optional short continuation cursor.</summary>
+public sealed record MailSearchResult(
+    IReadOnlyList<MailSearchItem> Items,
+    IReadOnlyList<string> SearchedAccountIds,
+    IReadOnlyList<AccountReadFailure> FailedAccounts,
+    bool CoverageComplete,
+    string? NextCursor);
+
+/// <summary>Requests a bounded text segment for one result reference.</summary>
+public sealed record MailReadRequest(string Reference, int Offset = 0, int MaxCharacters = 8_000);
+
+/// <summary>Returns selected message details with bounded plain text.</summary>
+public sealed record MailMessageResult(
+    string Reference,
+    string AccountId,
+    string Subject,
+    string Sender,
+    IReadOnlyList<string> To,
+    IReadOnlyList<string> Cc,
+    DateTimeOffset ReceivedAt,
+    string Text,
+    int Offset,
+    bool MoreAvailable);
+
+/// <summary>Provider-owned compact search item before a local short reference is assigned.</summary>
+public sealed record ProviderMailSummary(
+    string ProviderMessageId,
+    string Subject,
+    string Sender,
+    DateTimeOffset ReceivedAt,
+    string Preview);
+
+/// <summary>One provider search page with its opaque provider continuation.</summary>
+public sealed record ProviderMailSearchPage(IReadOnlyList<ProviderMailSummary> Items, string? NextCursor);
+
+/// <summary>Provider-owned message content before application-level bounding.</summary>
+public sealed record ProviderMailMessage(
+    string ProviderMessageId,
+    string Subject,
+    string Sender,
+    IReadOnlyList<string> To,
+    IReadOnlyList<string> Cc,
+    DateTimeOffset ReceivedAt,
+    string PlainText);
+
+/// <summary>Reads mail from one provider without exposing access tokens to the application layer.</summary>
+public interface IMailReader
+{
+    /// <summary>Gets the stable provider identifier.</summary>
+    string ProviderId { get; }
+
+    /// <summary>Searches one account and returns a provider page ordered newest first.</summary>
+    Task<ProviderMailSearchPage> SearchAsync(
+        Account account,
+        ProviderMailQuery query,
+        int limit,
+        string? cursor,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Reads one selected provider message without modifying mailbox state.</summary>
+    Task<ProviderMailMessage> ReadAsync(
+        Account account,
+        string providerMessageId,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>Indicates that a provider read failed without exposing response bodies or credentials.</summary>
+public sealed class ProviderReadException : Exception
+{
+    /// <summary>Creates a sanitized provider read failure.</summary>
+    public ProviderReadException(string message)
+        : base(message)
+    {
+    }
+}

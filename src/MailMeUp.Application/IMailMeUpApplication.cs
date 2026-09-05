@@ -10,6 +10,36 @@ public interface IMailMeUpApplication
 
     /// <summary>Returns non-secret account metadata from the local registry.</summary>
     Task<IReadOnlyList<Account>> ListAccountsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Reports local provider app registration readiness without returning credentials.</summary>
+    Task<IReadOnlyList<ProviderSetupStatus>> ListProviderSetupAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Configures a provider app identity from local CLI input.</summary>
+    Task<ProviderSetupResult> ConfigureProviderAsync(string providerId, string source, CancellationToken cancellationToken = default);
+
+    /// <summary>Runs local interactive sign-in for one read-only provider account.</summary>
+    Task<AccountConnectionResult> ConnectAccountAsync(
+        string providerId,
+        AccountConnectionOptions options,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Removes one account and its local credential cache without changing provider data.</summary>
+    Task<AccountRemovalResult> RemoveAccountAsync(string accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Searches mail across selected accounts and returns compact references.</summary>
+    Task<MailSearchResult> SearchMailAsync(MailSearchRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads a bounded plain-text segment for one prior search reference.</summary>
+    Task<MailMessageResult> ReadMailAsync(MailReadRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Lists visible calendars with short local references.</summary>
+    Task<CalendarListResult> ListCalendarsAsync(CalendarListRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns a bounded unified agenda from selected calendars.</summary>
+    Task<EventSearchResult> SearchEventsAsync(EventSearchRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads bounded details for one prior appointment reference.</summary>
+    Task<EventResult> ReadEventAsync(EventReadRequest request, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Describes capabilities available in the running build.</summary>

@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="../MailMeUp.Core/MailMeUp.Core.csproj" />
+    <ProjectReference Include="../MailMeUp.Security/MailMeUp.Security.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Client" />
   </ItemGroup>
 </Project>

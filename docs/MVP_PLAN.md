@@ -1,11 +1,13 @@
-🟩⬜⬜⬜⬜⬜⬜⬜ **12.5% complete · 87.5% remaining**
+🟩🟩🟩🟩🟩⬜⬜⬜ **62.5% source prepared · 37.5% remaining**
 
-**📍 Current focus:** Phase 1 — Prepare the pilot; paused for a workstation restart.
-**⏭️ Next action:** Restore the Edge connection and create the provider app registrations. See the [restart checkpoint](../.github/tasks/resume.md).
+🟩⬜⬜⬜⬜⬜⬜⬜ **12.5% verified · 87.5% awaiting verification or later work**
 
-Progress: **1 of 8 phases complete**, counting the foundation. Phases have equal weight; this is not an estimate of development time.
+**📍 Current focus:** Complete the provider registrations, then verify phases 2–5 with real accounts.
+**⏭️ Next action:** Finish both provider registrations, then validate account separation, mail search and calendar agenda with known examples. See the [restart checkpoint](../.github/tasks/resume.md).
 
-🟢 Complete · 🟡 In progress · ⚪ Not started · 🧪 Awaiting requested checks
+Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **1 of 8 phases**. Phases have equal weight; these percentages are status markers, not estimates of development time.
+
+🟢 Complete · 🟡 In progress · ⚪ Not started · 🧪 Automated checks passed; real-provider checks pending
 
 # From foundation to a real-world MVP
 
@@ -21,45 +23,45 @@ Progress: **1 of 8 phases complete**, counting the foundation. Phases have equal
 - 🟢 **0.2** Solution, executable, local metadata and basic MCP connection.
 - 🟢 **0.3** Initial tests, CI and six-platform packaging checks completed.
 
-**Completed:** the foundation works. Real email and calendar access is still to be built.
+**Completed:** the foundation works. Real email and calendar code now passes local automated checks but remains unverified against providers.
 
 ## 🟡 1. Prepare the pilot — 0% (0/3 complete)
 
 - ⚪ **1.1** Choose approved test accounts: two Google and two Microsoft accounts, covering personal and work accounts where available.
-- 🟡 **1.2** Set up the Google and Microsoft application registrations and check consent requirements for the selected testers. The [registration guide](APP_REGISTRATION.md) is prepared; neither registration has been created.
+- 🟡 **1.2** Set up the Google and Microsoft application registrations and check consent requirements for the selected testers. The Google Cloud project `mailmeup` exists; API, consent and client completion are still to be confirmed. Microsoft remains to be created.
 - ⚪ **1.3** Choose a few messages and appointments with known results to verify later.
 
 **Ready when:** the pilot accounts and required read permissions are available. Any work-account restrictions are understood.
 
-## ⚪ 2. Connect accounts safely — 0% (0/3)
+## 🧪 2. Connect accounts safely — source prepared, 0% verified
 
-- ⚪ **2.1** Add browser sign-in, clear account names and separate consent for email and calendars.
-- ⚪ **2.2** Protect credentials using the operating system; never save plain-text tokens.
-- ⚪ **2.3** Support restart, expired access, reconnect and local account removal without mixing identities.
+- 🧪 **2.1** Browser sign-in, account choice and mail/calendar scope choices compile and have local contract coverage; interactive provider checks remain.
+- 🧪 **2.2** Provider credentials and account token caches use operating-system protection in source; persistence on each supported OS remains to be checked.
+- 🧪 **2.3** Multiple identity slots, reconnect and local account removal are implemented in source. Restart and expired-access behavior still need real-provider checks.
 
 **Ready when:** several accounts remain usable after restarting, and a missing or locked credential store produces a clear error.
 
-## ⚪ 3. Read email from both providers — 0% (0/3)
+## 🧪 3. Read email from both providers — source prepared, 0% verified
 
-- ⚪ **3.1** Search by words, sender and date within a chosen account.
-- ⚪ **3.2** Read selected messages and conversations as clean text.
-- ⚪ **3.3** Handle large messages, more result pages and unavailable accounts.
+- 🧪 **3.1** Provider search is implemented in source; Gmail and Microsoft queries still need real-account comparison.
+- 🧪 **3.2** Selected messages return bounded plain text. Conversation/thread reading remains outside this first slice.
+- 🧪 **3.3** Bounded responses, continuation pages and account-level failures pass synthetic tests and await provider checks.
 
 **Ready when:** results match the known examples in Gmail and Outlook, without changing unread flags or other mailbox data.
 
-## ⚪ 4. Search across accounts — 0% (0/3)
+## 🧪 4. Search across accounts — source prepared, 0% verified
 
-- ⚪ **4.1** Let the user select one, several or all connected accounts.
-- ⚪ **4.2** Return short previews with one overall result limit; fetch details only when requested.
-- ⚪ **4.3** Identify each result's account and report any accounts that could not be searched.
+- 🧪 **4.1** One, several or all mail-enabled accounts can be selected in source.
+- 🧪 **4.2** Global limits, 160-character previews and short local references are implemented in source.
+- 🧪 **4.3** Results carry account identity and partial failures; synthetic aggregation tests pass and real multi-account behavior awaits checks.
 
 **Ready when:** Codex can answer a cross-account request without confusing sources or presenting incomplete coverage as complete.
 
-## ⚪ 5. Add calendars and appointments — 0% (0/3)
+## 🧪 5. Add calendars and appointments — source prepared, 0% verified
 
-- ⚪ **5.1** List calendars and let the user select which ones to include.
-- ⚪ **5.2** Show a combined agenda and open selected appointment details.
-- ⚪ **5.3** Verify time zones, all-day events, recurring meetings and cancellations.
+- 🧪 **5.1** Calendar listing and short selection references pass synthetic tests.
+- 🧪 **5.2** Combined agenda, scope-bound cursors and bounded appointment details pass synthetic tests.
+- 🧪 **5.3** Provider occurrence expansion, all-day boundaries and cancellations are handled in source; time-zone and recurrence examples still need checks.
 
 **Ready when:** the agenda matches Google and Microsoft calendars for the requested dates, with no changes or invitations sent.
 

@@ -1,20 +1,22 @@
-# Foundation validation
+# Validation
 
-Checked on 2026-09-05 using synthetic data and no provider credentials.
+Checked locally on Windows on 2026-09-05 using synthetic `example.test` data and no provider credentials.
 
 ## Passed
 
-- Release build with zero warnings or errors; nine account integrity and readiness tests.
-- Real CLI/MCP process checks: startup, discovery, tool calls, read-only status and no files created during first-run discovery.
-- Local Windows x64 executable tested before and after ZIP extraction; checksum verified.
-- CI on Windows, Linux and macOS.
-- Six portable packages produced: x64 and ARM64 for each operating system.
-- Documentation links, dependency inventory and generated concept artwork reviewed.
+- Locked dependency restore, formatting check and Release build with zero warnings or errors.
+- Fifteen account, storage, provider setup, cross-account mail, calendar, pagination and readiness tests.
+- Real CLI/MCP process checks for all seven tools, empty first-run reads, invalid references and read-only annotations.
+- Dependency inventory, local-data rules and documentation links.
 
-The first complete package rehearsal is recorded in [this successful run](https://github.com/umbertotechnopreneur/MailMeUp/actions/runs/33943689252). Later checks are available in the [workflow history](https://github.com/umbertotechnopreneur/MailMeUp/actions).
+Earlier foundation checks also produced six portable packages and ran CI on Windows, Linux and macOS. The first package rehearsal is recorded in [this successful run](https://github.com/umbertotechnopreneur/MailMeUp/actions/runs/33943689252).
 
 ## Limits
 
-Native package smoke tests run only when the runner matches the target CPU. Other packages record that native execution was not tested.
+The current read-only provider source has not yet been packaged or run by remote CI. Native package smoke tests run only when the runner matches the target CPU.
 
-Real account sign-in, protected credentials, mail and calendar operations are not implemented or tested. Provider scope remains read-only. No release was published.
+Real Google/Microsoft sign-in, OS-protected credential persistence and provider result comparison still require the app registrations and authorized pilot accounts. Provider scope remains read-only. No release was published.
+
+## Current source changes
+
+Provider setup, account removal, cross-account aggregation and read-only mail/calendar MCP contracts now pass local automated checks. Browser sign-in and real provider reads remain unverified.

@@ -27,16 +27,23 @@ def main():
     with tempfile.TemporaryDirectory(prefix="mailmeup-smoke-") as directory:
         registry = str(Path(directory) / "registry")
         environment = {**os.environ, "MAILMEUP_DATA_DIR": registry, "DOTNET_CLI_UI_LANGUAGE": "en"}
-        for cli_args in (["--help"], ["--version"], ["status"], ["accounts", "list"]):
+        for cli_args in (["--help"], ["--version"], ["status"], ["accounts", "list"], ["setup", "status"]):
             result = subprocess.run(command + cli_args, env=environment, capture_output=True, text=True, timeout=30, check=True)
             check(bool(result.stdout.strip()), f"Empty output for {cli_args}")
             if cli_args == ["status"]:
                 status = json.loads(result.stdout)
-                check(status["can_connect_accounts"] is False, "Foundation advertised OAuth")
+                check(status["stage"] == "read_only_mvp", "Incorrect application stage")
+                check(status["can_connect_accounts"] is True, "Account connection was not advertised")
                 check(status["read_only"] is True, "Read-only scope was not reported")
-                check(all(not provider["calendar_read_available"] for provider in status["providers"]), "Foundation advertised calendar access")
+                check(all(provider["authentication_available"] for provider in status["providers"]), "Missing authentication capability")
+                check(all(provider["mail_read_available"] for provider in status["providers"]), "Missing mail capability")
+                check(all(provider["calendar_read_available"] for provider in status["providers"]), "Missing calendar capability")
             if cli_args == ["accounts", "list"]:
                 check(json.loads(result.stdout) == {"accounts": []}, "Unexpected account data")
+            if cli_args == ["setup", "status"]:
+                providers = json.loads(result.stdout)["providers"]
+                check({provider["provider_id"] for provider in providers} == {"google", "microsoft"}, "Unexpected setup providers")
+                check(all(not provider["configured"] for provider in providers), "Fresh setup should be empty")
         invalid = subprocess.run(command + ["unknown"], env=environment, capture_output=True, text=True, timeout=30)
         check(invalid.returncode == 2 and not invalid.stdout, "Unknown commands must fail on stderr")
 
@@ -87,15 +94,30 @@ def main():
             send({"method": "notifications/initialized"})
             send({"id": 2, "method": "tools/list"})
             tools = receive(2)["result"]["tools"]
-            check({tool["name"] for tool in tools} == {"get_status", "list_accounts"}, "Unexpected tool surface")
+            expected_tools = {"get_status", "list_accounts", "search_mail", "read_mail",
+                              "list_calendars", "search_events", "read_event"}
+            check({tool["name"] for tool in tools} == expected_tools, "Unexpected tool surface")
             check(all(tool["annotations"]["readOnlyHint"] for tool in tools), "Missing read-only hints")
             send({"id": 3, "method": "tools/call", "params": {"name": "get_status", "arguments": {}}})
-            check(content(receive(3))["can_connect_accounts"] is False, "Incorrect MCP readiness")
+            check(content(receive(3))["can_connect_accounts"] is True, "Incorrect MCP readiness")
             send({"id": 4, "method": "tools/call", "params": {"name": "list_accounts", "arguments": {}}})
             check(content(receive(4)) == {"accounts": []}, "Unexpected MCP account data")
-            send({"id": 5, "method": "tools/call", "params": {"name": "search_mail", "arguments": {}}})
-            unavailable = receive(5)
-            check("error" in unavailable or unavailable.get("result", {}).get("isError", False), "Unimplemented mail tool accepted")
+            send({"id": 5, "method": "tools/call", "params": {"name": "search_mail", "arguments": {"query": "sample"}}})
+            mail = content(receive(5))
+            check(mail["items"] == [] and mail["coverage_complete"] is True, "Unexpected empty mail search")
+            send({"id": 6, "method": "tools/call", "params": {"name": "list_calendars", "arguments": {}}})
+            calendars = content(receive(6))
+            check(calendars["calendars"] == [] and calendars["coverage_complete"] is True, "Unexpected empty calendar list")
+            send({"id": 7, "method": "tools/call", "params": {"name": "search_events", "arguments": {
+                "start": "2026-09-05T00:00:00+07:00", "end": "2026-09-06T00:00:00+07:00"}}})
+            events = content(receive(7))
+            check(events["events"] == [] and events["coverage_complete"] is True, "Unexpected empty event search")
+            for identifier, name, arguments in ((8, "read_mail", {"reference": "m_invalid"}),
+                                                (9, "read_event", {"reference": "evt_invalid"})):
+                send({"id": identifier, "method": "tools/call", "params": {"name": name, "arguments": arguments}})
+                rejected = receive(identifier)
+                check("error" in rejected or rejected.get("result", {}).get("isError", False),
+                      f"Invalid reference was accepted by {name}")
         finally:
             process.stdin.close()
             try:
@@ -104,7 +126,7 @@ def main():
                 process.kill()
                 process.wait(timeout=5)
         check(not Path(registry).exists(), "Discovery created local state")
-    print("PASS: CLI commands, errors, MCP handshake, tool discovery, tool calls, and stateless first run.")
+    print("PASS: CLI commands, errors, seven-tool MCP surface, empty reads, invalid references, and stateless first run.")
 
 
 if __name__ == "__main__":

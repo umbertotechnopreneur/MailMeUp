@@ -2,7 +2,7 @@
 
 MailMeUp is a local MCP program. No marketplace is required.
 
-**The foundation exposes status and account listing only. Real email and calendar access is still planned, with read-only permissions.**
+**The current source exposes seven read-only MCP tools and passes local automated checks. Account setup remains a local CLI action; real provider sign-in still needs the app registrations and pilot accounts.**
 
 ## 1. Build or extract
 
@@ -36,7 +36,7 @@ Run `codex mcp list`. Reload the Codex task/app if necessary, then ask:
 
 > Use MailMeUp to show its status and list configured accounts.
 
-An empty list is expected today. Future mailbox sign-in will happen through MailMeUp, not `codex mcp login`.
+An empty list is expected before local setup. Mailbox sign-in happens through `mailmeup accounts connect`, not `codex mcp login`. Real-provider checks remain pending.
 
 Remove the registration with `codex mcp remove mailmeup`. This does not delete data or revoke provider access.
 

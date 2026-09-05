@@ -1,3 +1,3 @@
 # Microsoft calendar adapter boundary
 
-Reserved for Microsoft Graph calendar discovery, calendarView queries, recurrence/exception mapping and delegated calendar permissions. Reuse MSAL identity and protected cache infrastructure. No Graph calendar calls are implemented yet.
+Microsoft Graph calendar discovery, chronological `calendarView` queries and selected-event details use delegated `Calendars.Read` access. The adapter reuses MSAL identity and the protected multi-account cache. Provider writes are absent.

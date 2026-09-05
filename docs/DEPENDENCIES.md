@@ -6,6 +6,9 @@ This lists package dependencies, including transitive dependencies. Self-contain
 
 | Package | Version | Declared license |
 | --- | --- | --- |
+| Google.Apis.Auth | 1.76.0 | Apache-2.0 |
+| Google.Apis.Core | 1.76.0 | Apache-2.0 |
+| Google.Apis | 1.76.0 | Apache-2.0 |
 | Microsoft.Data.Sqlite.Core | 10.0.11 | MIT |
 | Microsoft.Data.Sqlite | 10.0.11 | MIT |
 | Microsoft.Extensions.AI.Abstractions | 10.8.3 | MIT |
@@ -37,12 +40,19 @@ This lists package dependencies, including transitive dependencies. Self-contain
 | Microsoft.Extensions.Options.ConfigurationExtensions | 10.0.11 | MIT |
 | Microsoft.Extensions.Options | 10.0.11 | MIT |
 | Microsoft.Extensions.Primitives | 10.0.11 | MIT |
+| Microsoft.Identity.Client.Extensions.Msal | 4.88.0 | MIT |
+| Microsoft.Identity.Client | 4.88.0 | MIT |
+| Microsoft.IdentityModel.Abstractions | 8.14.0 | MIT |
 | ModelContextProtocol.Core | 2.2.0 | Apache-2.0 |
 | ModelContextProtocol | 2.2.0 | Apache-2.0 |
+| Newtonsoft.Json | 13.0.4 | MIT |
 | Spectre.Console.Ansi | 0.57.2 | MIT |
 | Spectre.Console | 0.57.2 | MIT |
 | SQLitePCLRaw.bundle_e_sqlite3 | 2.1.12 | Apache-2.0 |
 | SQLitePCLRaw.core | 2.1.12 | Apache-2.0 |
 | SQLitePCLRaw.lib.e_sqlite3 | 2.1.12 | Apache-2.0 |
 | SQLitePCLRaw.provider.e_sqlite3 | 2.1.12 | Apache-2.0 |
+| System.CodeDom | 7.0.0 | MIT |
 | System.Diagnostics.EventLog | 10.0.11 | MIT |
+| System.Management | 7.0.2 | MIT |
+| System.Security.Cryptography.ProtectedData | 4.5.0 | [Legacy metadata](https://github.com/dotnet/corefx/blob/master/LICENSE.TXT) |

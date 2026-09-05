@@ -8,7 +8,7 @@ pwsh -NoProfile -File scripts/validate.ps1
 
 This restores locked dependencies, checks formatting, builds with warnings as errors, runs tests and verifies the real CLI/MCP process. It also checks dependency notices and local document links. No real account credentials are used.
 
-To run the built foundation:
+To run the built app:
 
 ```sh
 dotnet run --project src/MailMeUp.Cli -c Release --no-build -- status

@@ -8,4 +8,7 @@ public interface IAccountStore
 
     /// <summary>Saves metadata for an account after the authentication layer establishes its identity.</summary>
     Task SaveAsync(Account account, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes one local account record and returns whether it existed.</summary>
+    Task<bool> DeleteAsync(string accountId, CancellationToken cancellationToken = default);
 }

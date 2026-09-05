@@ -10,12 +10,12 @@ Reading and searching only. No sending, editing, deleting, invitations or change
 
 Local account setup and cache management can still save data on your computer.
 
-## Supported services in the plan
+## Services in scope
 
 - Gmail and Google Workspace
 - Outlook.com and Microsoft 365
 - Google Calendar and Microsoft calendars
 
-The foundation currently provides the executable and connection checks. Account sign-in and access to real messages or appointments are still planned.
+The validated foundation provides the executable and connection checks. Current source adds account sign-in and read-only message/appointment access; local automated checks pass and a real-provider pilot remains.
 
 See the [roadmap](ROADMAP.md) for the next steps.

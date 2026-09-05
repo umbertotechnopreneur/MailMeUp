@@ -1,3 +1,3 @@
 # Google Calendar adapter boundary
 
-Reserved for Google Calendar API integration, incremental calendar consent, calendar discovery, bounded occurrence queries and provider-specific pagination. Reuse Google account identity and protected token infrastructure. No Calendar API calls are implemented yet.
+Google Calendar discovery, bounded occurrence queries and selected-event details use the protected Google account token. If calendar scopes change, request the complete required scope set in a fresh consent flow. Provider writes are absent.

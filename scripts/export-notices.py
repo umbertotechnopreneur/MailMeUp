@@ -40,9 +40,14 @@ def main():
             raise RuntimeError(f"Package not restored: {key}")
         spec = metadata(next(folder.glob("*.nuspec")))
         license_element = spec.find("license")
-        if license_element is None or not license_element.text:
+        license_url_element = spec.find("licenseUrl")
+        if license_element is not None and license_element.text:
+            license_name = license_element.text.strip()
+        elif license_url_element is not None and license_url_element.text:
+            license_url = license_url_element.text.strip()
+            license_name = f"[Legacy metadata]({license_url})"
+        else:
             raise RuntimeError(f"Review missing license metadata: {key}")
-        license_name = license_element.text.strip()
         rows.append(f"| {name} | {version} | {license_name} |")
         if args.copy_to:
             destination = args.copy_to / f"{name}.{version}"
@@ -51,7 +56,7 @@ def main():
             for file in folder.iterdir():
                 if file.is_file() and any(word in file.name.lower() for word in ("license", "notice", "copying")):
                     shutil.copy2(file, destination / file.name)
-            if license_element.get("type") == "file":
+            if license_element is not None and license_element.get("type") == "file":
                 license_file = (folder / license_name).resolve(strict=True)
                 if not license_file.is_relative_to(folder.resolve()):
                     raise RuntimeError(f"Unsafe license path: {key}")

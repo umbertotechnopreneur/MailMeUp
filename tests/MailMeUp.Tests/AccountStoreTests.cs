@@ -29,6 +29,26 @@ public sealed class AccountStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadCapabilitiesRoundTripAndAccountRemovalIsLocal()
+    {
+        var store = new SqliteAccountStore(_directory);
+        await store.SaveAsync(new(
+            "google:test",
+            "google",
+            "Test account",
+            "person@example.test",
+            MailReadEnabled: true,
+            CalendarReadEnabled: false));
+
+        var persisted = Assert.Single(await store.ListAsync());
+        Assert.True(persisted.MailReadEnabled);
+        Assert.False(persisted.CalendarReadEnabled);
+        Assert.True(await store.DeleteAsync(persisted.Id));
+        Assert.False(await store.DeleteAsync(persisted.Id));
+        Assert.Empty(await store.ListAsync());
+    }
+
+    [Fact]
     public async Task SaveUpdatesOnlyTheRequestedAccountAndTreatsInputAsData()
     {
         var store = new SqliteAccountStore(_directory);

@@ -2,7 +2,7 @@ using MailMeUp.Core;
 
 namespace MailMeUp.Providers.Google;
 
-/// <summary>Reserves the Google integration boundary and accurately reports its foundation status.</summary>
+/// <summary>Declares the Google provider; runtime capability flags are supplied by registered adapters.</summary>
 public sealed class GoogleProviderModule : IProviderModule
 {
     /// <inheritdoc />

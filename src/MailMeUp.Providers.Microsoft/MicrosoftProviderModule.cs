@@ -2,7 +2,7 @@ using MailMeUp.Core;
 
 namespace MailMeUp.Providers.Microsoft;
 
-/// <summary>Reserves the Microsoft Graph integration boundary and accurately reports its foundation status.</summary>
+/// <summary>Declares the Microsoft provider; runtime capability flags are supplied by registered adapters.</summary>
 public sealed class MicrosoftProviderModule : IProviderModule
 {
     /// <inheritdoc />

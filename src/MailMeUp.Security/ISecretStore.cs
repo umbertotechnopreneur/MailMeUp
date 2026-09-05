@@ -1,6 +1,6 @@
 namespace MailMeUp.Security;
 
-/// <summary>Future OS-protected credential persistence boundary. No implementation ships in the foundation.</summary>
+/// <summary>OS-protected credential persistence boundary.</summary>
 public interface ISecretStore
 {
     /// <summary>Reads a protected credential blob by its opaque reference; returns null when absent.</summary>
@@ -11,4 +11,20 @@ public interface ISecretStore
 
     /// <summary>Deletes a stored credential blob without exposing its contents.</summary>
     ValueTask DeleteAsync(string reference, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Indicates that the operating system could not safely protect credential material.</summary>
+public sealed class SecretStoreException : Exception
+{
+    /// <summary>Creates a sanitized credential-store failure.</summary>
+    public SecretStoreException(string message)
+        : base(message)
+    {
+    }
+
+    /// <summary>Creates a sanitized credential-store failure.</summary>
+    public SecretStoreException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }

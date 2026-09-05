@@ -24,11 +24,11 @@ MailMeUp runs on your computer. Each user connects their own accounts. No market
 
 ## What works today
 
-**This is a foundation build, not a ready-to-use email or calendar integration.**
+**This is an early build, not a ready-to-use email or calendar integration.**
 
-The executable starts, reports its status and exposes two discovery tools: `get_status` and `list_accounts`. The project includes documentation, automated checks and packaging for Windows, Linux and macOS.
+The last validated foundation exposes `get_status` and `list_accounts`. The current source adds local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Client credentials and account token caches use operating-system protection.
 
-**Account sign-in, protected token storage, email searches and calendar access are still to be built.**
+**The new account, mail and calendar code passes local automated checks. Real provider sign-in, portable packaging and the pilot still remain before a tested release.**
 
 ## How it fits together
 

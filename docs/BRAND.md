@@ -8,7 +8,7 @@ Tagline: **All your inboxes. One conversation.**
 
 One-line description: **A local email bridge that brings multiple accounts into your AI conversation.**
 
-Expanded product description: **Email and calendars from multiple accounts, available through one local MCP bridge.** The current illustrations show the email workflow; calendars are part of the documented roadmap.
+Expanded product description: **Email and calendars from multiple accounts, available through one local MCP bridge.**
 
 The identity shares the practical, personal naming rhythm of PromptMeUp and TrackMeUp. The visual idea is convergence: several envelopes become one useful conversation.
 
@@ -29,6 +29,8 @@ Use restrained dimensional envelopes, generous empty space and clear connection 
 - `assets/branding/mailmeup-hero.png`: generated README/product hero.
 - `assets/branding/mailmeup-concept.png`: generated planned architecture illustration.
 - `assets/branding/mailmeup-icon.svg`: editable vector envelope mark.
+- `assets/branding/mailmeup-app-icon-source.png`: large raster app-icon artwork.
+- `assets/branding/mailmeup-app-icon-256.png`: compact app-icon variant.
 - `assets/branding/GENERATION.md`: final prompts, tool mode and provenance.
 
 Keep the concept caption whenever an image could be mistaken for a shipping UI. Do not promise offline processing, supported providers or secure token storage before those features ship. Product names and any indicative provider symbols identify compatibility, not endorsement or ownership of another company's marks.

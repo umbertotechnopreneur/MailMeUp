@@ -7,7 +7,7 @@ An app registration gives MailMeUp an identity at each provider. It produces a *
 1. Open [Google Cloud Console](https://console.cloud.google.com/) and create a project named **MailMeUp**.
 2. In **APIs & Services > Library**, enable **Gmail API** and **Google Calendar API**.
 3. Open **Google Auth Platform**. Set the app name and contact email, choose **External** for personal and work accounts, and add your pilot accounts as test users. Keep the app in testing for the initial pilot.
-4. Under **Data Access**, select only the email/calendar read scopes required by MailMeUp, plus basic account identity.
+4. Under **Data Access**, add `openid`, `email`, `profile`, `gmail.readonly`, `calendar.calendarlist.readonly` and `calendar.events.readonly`.
 5. Under **Clients > Create client**, choose **Desktop app** and name it **MailMeUp Desktop**. Keep the Client ID and downloaded client configuration privately on your computer.
 
 Calendar permission changes require a new consent flow for this desktop app. Do not assume Google supports automatic incremental consent for installed apps.
@@ -18,7 +18,7 @@ Calendar permission changes require a new consent flow for this desktop app. Do 
 2. Go to **Entra ID > App registrations > New registration**. Name the app **MailMeUp**.
 3. To support Outlook.com and Microsoft 365, select the account type covering **any Entra ID tenant and personal Microsoft accounts**.
 4. Add the **Mobile and desktop applications** platform with **http://localhost** as its browser callback.
-5. Add Microsoft Graph **delegated** read permissions for mail and calendars, plus basic profile access. Record the **Application (client) ID**. This desktop application does not need a client secret.
+5. Add Microsoft Graph **delegated** permissions `User.Read`, `Mail.Read` and `Calendars.Read`. Record the **Application (client) ID**. This desktop application does not need a client secret.
 
 Work directories may require administrator approval. For the first pilot, use accounts you are authorized to connect.
 

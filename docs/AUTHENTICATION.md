@@ -1,6 +1,6 @@
 # Accounts and credentials
 
-**Planned. Sign-in and protected token storage are not implemented yet.**
+Provider app setup, interactive multi-account sign-in and protected token caches are present in the current source. Local automated checks pass; real sign-in still needs the provider registrations.
 
 Each user signs in through Google or Microsoft in their browser. Each account is authorized separately. MailMeUp does not need your account password.
 
@@ -15,6 +15,24 @@ Each user signs in through Google or Microsoft in their browser. Each account is
 | Account names and addresses | Identify your connected accounts | Local SQLite database |
 
 Tokens must never appear in Codex prompts, logs, GitHub or the SQLite metadata database. Microsoft desktop sign-in does not use a confidential client secret; a distributed executable cannot keep a shared embedded secret confidential.
+
+## Local app setup
+
+- `mailmeup setup google <client-json>` imports a Google **Desktop app** client file. It saves the public client ID in local settings and protects the client secret with the operating system. The downloaded source file remains in place for the user to remove.
+- `mailmeup setup microsoft <client-id>` saves the public Application (client) ID. A Microsoft desktop app does not need a client secret.
+- `mailmeup setup status` reports whether each provider is configured without revealing credentials.
+
+These commands configure the provider applications. Connect an account afterwards:
+
+- `mailmeup accounts connect google`
+- `mailmeup accounts connect microsoft`
+- add `--mail-only` or `--calendar-only` to request one data category
+
+Run the command again to add another account. Sign-in uses the system browser and a fresh account choice. Google tokens use a protected slot per account; Microsoft accounts share MSAL's protected multi-account cache without sharing identities.
+
+`mailmeup accounts remove <account-id>` removes local metadata and cached credentials. It does not revoke the grant at Google or Microsoft.
+
+Remove that provider's connected accounts before replacing its app registration. This keeps old token caches from becoming unreachable.
 
 ## Read-only access
 
