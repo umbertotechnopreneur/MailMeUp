@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 READ_ONLY_TOOLS = frozenset({
-    "get_status", "list_accounts", "search_mail", "read_mail",
+    "get_status", "list_accounts", "search_mail", "search_unread_mail", "search_mail_by_date", "read_mail",
     "list_calendars", "search_events", "read_event",
 })
 CI_FLAGS = ("CI", "GITHUB_ACTIONS", "GITLAB_CI", "TF_BUILD", "CIRCLECI",

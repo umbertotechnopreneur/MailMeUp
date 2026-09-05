@@ -2,19 +2,23 @@
 
 **Read-only scope.** No send, update, delete, invite or appointment-write tools.
 
+All mail searches exclude Gmail `SPAM` and `TRASH`, and Microsoft `Junk Email` and `Deleted Items`, by default. Reading a message never marks it as read.
+
 ## Current source
 
 | Tool | Result |
 | --- | --- |
 | `get_status` | Build stage, read-only mode and separate provider capabilities |
 | `list_accounts` | Local account IDs, providers, labels and addresses |
-| `search_mail` | Short matches across selected or all mail-enabled accounts |
+| `search_mail` | Short matches across selected or all mail-enabled accounts, with optional structured filters |
+| `search_unread_mail` | Unread short matches, with optional date, sender, recipient and attachment filters |
+| `search_mail_by_date` | Short matches in an inclusive/exclusive received-time range, with optional unread, sender, recipient and attachment filters |
 | `read_mail` | Bounded plain text for one selected message reference |
 | `list_calendars` | Calendars with short local references |
 | `search_events` | Combined agenda in a bounded time window |
 | `read_event` | Bounded details for one selected appointment |
 
-All tools are read-only. A new installation has no accounts. Paths, provider item IDs and credentials are never returned. The five provider-read tools pass local automated checks and are not part of the previously validated foundation package.
+All tools are read-only. A new installation has no accounts. Paths, provider item IDs and credentials are never returned. The original five provider-read tools pass local automated checks; the two structured mail tools and their provider-side filters still need dedicated validation.
 
 Provider registration and interactive account connection are local CLI commands. They are deliberately not exposed through MCP.
 
@@ -25,13 +29,13 @@ Provider registration and interactive account connection are local CLI commands.
 | `read_thread` | Selected conversation text |
 | `mail_stats` | Counts identified as exact or estimated |
 
-Attachments, sending, edits and invitations are outside the MVP.
+Attachment content/downloads, sending, edits and invitations are outside the MVP.
 
 ## Keep results small and accurate
 
 Omit account IDs to search all eligible accounts, or pass explicit IDs. Calendar selection is separate. Defaults are 20 results globally, 160-character mail previews and 8,000-character detail pages. More results use a short in-memory continuation cursor.
 
-Mail search accepts common text plus optional sender and received-time boundaries. Each adapter translates those structured filters to Gmail or Microsoft syntax.
+Mail search accepts common text plus optional sender/recipient contains filters, unread state, attachment presence and received-time boundaries. Each adapter translates those structured filters to Gmail or Microsoft syntax. `search_unread_mail` and `search_mail_by_date` do not require a text query.
 
 Search first, read details second. Omit raw HTML, MIME, binary attachments and unnecessary attendee lists. Caching reduces API calls; it does not automatically reduce conversation tokens.
 

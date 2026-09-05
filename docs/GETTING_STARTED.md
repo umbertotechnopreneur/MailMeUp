@@ -41,6 +41,10 @@ Restart or reload Codex if the new MCP server is not visible. Then try:
 
 > Use MailMeUp to search all my connected inboxes for the quarterly plan.
 
+> Use MailMeUp to list unread mail from all connected accounts, excluding Spam/Junk and Trash/Deleted Items.
+
+> Use MailMeUp to list mail received between 2026-09-01 and 2026-09-05, optionally filtering by sender, recipient or attachments.
+
 > Use MailMeUp to show appointments from all my connected calendars for the next seven days.
 
 MailMeUp returns short results first and reads details only when requested. It cannot send mail, change messages, edit appointments or send invitations.

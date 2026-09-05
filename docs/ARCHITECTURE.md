@@ -31,6 +31,7 @@ Calendar reads share account selection and coverage reporting through the applic
 ## Boundaries
 
 - Current provider scope is read-only. No write tools are registered or planned for this milestone.
+- Mail searches exclude Spam/Junk and Trash/Deleted Items by default; provider adapters enforce the exclusion before returning results.
 - MCP stdout contains protocol messages only; diagnostics go to stderr.
 - CLI output uses a compact banner and section dividers in terminals, with JSON for pipes or `--json`. An application decorator records bounded operation diagnostics through `ILogger<T>` for both adapters; Serilog lives only in the executable. See [logging](LOGGING.md).
 - SQLite stores metadata, never credentials. An empty account list does not create a database.

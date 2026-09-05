@@ -35,8 +35,7 @@ public sealed class GoogleMailReader : IMailReader
     {
         ValidateMailAccount(account);
         ArgumentNullException.ThrowIfNull(query);
-        ArgumentException.ThrowIfNullOrWhiteSpace(query.Text);
-        if (limit is < 1 or > 50 || cursor is { Length: > 4_096 })
+        if (query.Text.Length > 500 || query.Text.Any(char.IsControl) || limit is < 1 or > 50 || cursor is { Length: > 4_096 })
         {
             throw new ArgumentException("The Gmail search page is invalid.");
         }
@@ -47,6 +46,7 @@ public sealed class GoogleMailReader : IMailReader
             var url = new StringBuilder("https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=")
                 .Append(limit.ToString(CultureInfo.InvariantCulture))
                 .Append("&q=").Append(Uri.EscapeDataString(CreateProviderQuery(query)))
+                .Append("&includeSpamTrash=false")
                 .Append("&fields=messages(id%2CthreadId)%2CnextPageToken")
                 .ToString();
             if (!string.IsNullOrWhiteSpace(cursor))
@@ -117,7 +117,9 @@ public sealed class GoogleMailReader : IMailReader
                 AsHeaderList(headers, "To"),
                 AsHeaderList(headers, "Cc"),
                 ReadInternalDate(root),
-                text);
+                text,
+                IsRead: !HasLabel(root, "UNREAD"),
+                HasAttachments: payload.ValueKind != JsonValueKind.Undefined && HasAttachmentPart(payload));
         }
         catch (OperationCanceledException)
         {
@@ -141,26 +143,53 @@ public sealed class GoogleMailReader : IMailReader
         ValidateMessageId(messageId);
         var url = $"https://gmail.googleapis.com/gmail/v1/users/me/messages/{Uri.EscapeDataString(messageId)}" +
                   "?format=metadata&metadataHeaders=Subject&metadataHeaders=From" +
-                  "&fields=id%2CinternalDate%2Csnippet%2Cpayload%2Fheaders";
+                  "&metadataHeaders=To&metadataHeaders=Cc" +
+                  "&fields=id%2CinternalDate%2Csnippet%2ClabelIds%2Cpayload%2Fheaders%2Cpayload%2Fparts";
         using var document = await GetJsonAsync(url, accessToken, cancellationToken);
         var root = document.RootElement;
         var headers = root.TryGetProperty("payload", out var payload)
             ? ReadHeaders(payload)
             : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var recipients = AsHeaderList(headers, "To")
+            .Concat(AsHeaderList(headers, "Cc"))
+            .ToArray();
         return new ProviderMailSummary(
             messageId,
             GetHeader(headers, "Subject", "(no subject)"),
             GetHeader(headers, "From", string.Empty),
             ReadInternalDate(root),
-            GetOptionalString(root, "snippet") ?? string.Empty);
+            GetOptionalString(root, "snippet") ?? string.Empty,
+            IsRead: !HasLabel(root, "UNREAD"),
+            HasAttachments: payload.ValueKind != JsonValueKind.Undefined && HasAttachmentPart(payload),
+            Recipients: recipients);
     }
 
     private static string CreateProviderQuery(ProviderMailQuery query)
     {
-        var parts = new List<string> { query.Text };
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(query.Text))
+        {
+            parts.Add(query.Text);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Sender))
         {
             parts.Add($"from:\"{query.Sender.Replace("\"", string.Empty, StringComparison.Ordinal)}\"");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.RecipientContains))
+        {
+            parts.Add($"to:\"{query.RecipientContains.Replace("\"", string.Empty, StringComparison.Ordinal)}\"");
+        }
+
+        if (query.UnreadOnly)
+        {
+            parts.Add("is:unread");
+        }
+
+        if (query.HasAttachments is not null)
+        {
+            parts.Add(query.HasAttachments.Value ? "has:attachment" : "-has:attachment");
         }
 
         if (query.Start is not null)
@@ -233,6 +262,32 @@ public sealed class GoogleMailReader : IMailReader
         }
 
         return result;
+    }
+
+    private static bool HasLabel(JsonElement root, string label)
+    {
+        if (!root.TryGetProperty("labelIds", out var labels) || labels.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        return labels.EnumerateArray().Any(item =>
+            item.ValueKind == JsonValueKind.String &&
+            string.Equals(item.GetString(), label, StringComparison.Ordinal));
+    }
+
+    private static bool HasAttachmentPart(JsonElement part)
+    {
+        if (part.TryGetProperty("filename", out var filename) &&
+            filename.ValueKind == JsonValueKind.String &&
+            !string.IsNullOrWhiteSpace(filename.GetString()))
+        {
+            return true;
+        }
+
+        return part.TryGetProperty("parts", out var parts) &&
+               parts.ValueKind == JsonValueKind.Array &&
+               parts.EnumerateArray().Any(HasAttachmentPart);
     }
 
     private static string ReadBody(JsonElement payload)

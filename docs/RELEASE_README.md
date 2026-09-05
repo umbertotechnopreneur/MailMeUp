@@ -18,7 +18,7 @@ Register the executable using an absolute path:
 codex mcp add mailmeup -- /absolute/path/mailmeup --stdio
 ```
 
-Use the Windows executable path when applicable. Codex launches and controls the process; do not run a second server manually. The available tools are `get_status`, `list_accounts`, `search_mail`, `read_mail`, `list_calendars`, `search_events` and `read_event`.
+Use the Windows executable path when applicable. Codex launches and controls the process; do not run a second server manually. The available tools are `get_status`, `list_accounts`, `search_mail`, `search_unread_mail`, `search_mail_by_date`, `read_mail`, `list_calendars`, `search_events` and `read_event`.
 
 `MAILMEUP_DATA_DIR` optionally selects an absolute private data directory. No tokens or real mailbox data are included. Native library extraction requires a writable local location. See BUILD_INFO.txt for version, commit and whether this archive received a native smoke test. These pre-alpha binaries are unsigned.
 

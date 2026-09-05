@@ -34,8 +34,7 @@ public sealed class MicrosoftMailReader : IMailReader
     {
         ValidateMailAccount(account);
         ArgumentNullException.ThrowIfNull(query);
-        ArgumentException.ThrowIfNullOrWhiteSpace(query.Text);
-        if (limit is < 1 or > 50)
+        if (query.Text.Length > 500 || query.Text.Any(char.IsControl) || limit is < 1 or > 50)
         {
             throw new ArgumentException("The Microsoft mail search page is invalid.");
         }
@@ -43,7 +42,10 @@ public sealed class MicrosoftMailReader : IMailReader
         try
         {
             var accessToken = await _tokens.GetAsync(account, ["Mail.Read"], cancellationToken);
-            var url = string.IsNullOrWhiteSpace(cursor) ? CreateSearchUrl(query, limit) : ValidateNextLink(cursor);
+            var excludedFolderIds = await ReadExcludedFolderIdsAsync(accessToken, cancellationToken);
+            var url = string.IsNullOrWhiteSpace(cursor)
+                ? CreateSearchUrl(query, limit, excludedFolderIds)
+                : ValidateNextLink(cursor);
             using var document = await GetJsonAsync(url, accessToken, preferText: false, cancellationToken);
             var summaries = new List<ProviderMailSummary>();
             if (document.RootElement.TryGetProperty("value", out var values) && values.ValueKind == JsonValueKind.Array)
@@ -61,7 +63,19 @@ public sealed class MicrosoftMailReader : IMailReader
                         GetOptionalString(item, "subject") ?? "(no subject)",
                         ReadSender(item),
                         ReadDate(item),
-                        GetOptionalString(item, "bodyPreview") ?? string.Empty);
+                        GetOptionalString(item, "bodyPreview") ?? string.Empty,
+                        IsRead: GetOptionalBoolean(item, "isRead") ?? true,
+                        HasAttachments: GetOptionalBoolean(item, "hasAttachments") ?? false,
+                        Recipients: ReadRecipients(item, "toRecipients")
+                            .Concat(ReadRecipients(item, "ccRecipients"))
+                            .ToArray());
+                    var parentFolderId = GetOptionalString(item, "parentFolderId");
+                    if (string.IsNullOrWhiteSpace(parentFolderId) ||
+                        excludedFolderIds.Contains(parentFolderId, StringComparer.Ordinal))
+                    {
+                        continue;
+                    }
+
                     if ((query.Start is null || summary.ReceivedAt >= query.Start.Value) &&
                         (query.End is null || summary.ReceivedAt < query.End.Value))
                     {
@@ -100,7 +114,7 @@ public sealed class MicrosoftMailReader : IMailReader
         {
             var accessToken = await _tokens.GetAsync(account, ["Mail.Read"], cancellationToken);
             var url = $"https://graph.microsoft.com/v1.0/me/messages/{Uri.EscapeDataString(providerMessageId)}" +
-                      "?%24select=id%2Csubject%2Cfrom%2CtoRecipients%2CccRecipients%2CreceivedDateTime%2Cbody";
+                      "?%24select=id%2Csubject%2Cfrom%2CtoRecipients%2CccRecipients%2CreceivedDateTime%2Cbody%2CisRead%2ChasAttachments";
             using var document = await GetJsonAsync(url, accessToken, preferText: true, cancellationToken);
             var root = document.RootElement;
             var body = root.TryGetProperty("body", out var bodyProperty)
@@ -121,7 +135,9 @@ public sealed class MicrosoftMailReader : IMailReader
                 ReadRecipients(root, "toRecipients"),
                 ReadRecipients(root, "ccRecipients"),
                 ReadDate(root),
-                body);
+                body,
+                IsRead: GetOptionalBoolean(root, "isRead") ?? true,
+                HasAttachments: GetOptionalBoolean(root, "hasAttachments") ?? false);
         }
         catch (OperationCanceledException)
         {
@@ -137,32 +153,99 @@ public sealed class MicrosoftMailReader : IMailReader
         }
     }
 
-    private static string CreateSearchUrl(ProviderMailQuery query, int limit)
+    private static string CreateSearchUrl(
+        ProviderMailQuery query,
+        int limit,
+        IReadOnlyList<string> excludedFolderIds)
     {
-        var parts = new List<string> { query.Text };
-        if (!string.IsNullOrWhiteSpace(query.Sender))
+        var filterParts = new List<string>
         {
-            parts.Add($"from:\"{query.Sender}\"");
-        }
-
-        if (query.Start is not null)
-        {
-            parts.Add($"received>={query.Start.Value.UtcDateTime:yyyy-MM-dd}");
-        }
+            $"receivedDateTime ge {FormatGraphDate(query.Start ?? new DateTimeOffset(1900, 1, 1, 0, 0, 0, TimeSpan.Zero))}"
+        };
 
         if (query.End is not null)
         {
-            parts.Add($"received<{query.End.Value.UtcDateTime:yyyy-MM-dd}");
+            filterParts.Add($"receivedDateTime lt {FormatGraphDate(query.End.Value)}");
         }
 
-        var providerQuery = string.Join(" AND ", parts);
-        var escapedSearch = providerQuery.Replace("\\", "\\\\", StringComparison.Ordinal)
-            .Replace("\"", "\\\"", StringComparison.Ordinal);
-        return "https://graph.microsoft.com/v1.0/me/messages?" +
-               "%24search=" + Uri.EscapeDataString($"\"{escapedSearch}\"") +
-               "&%24select=id%2Csubject%2Cfrom%2CreceivedDateTime%2CbodyPreview" +
-               "&%24top=" + limit.ToString(CultureInfo.InvariantCulture);
+        if (query.UnreadOnly)
+        {
+            filterParts.Add("isRead eq false");
+        }
+
+        if (query.HasAttachments is not null)
+        {
+            filterParts.Add($"hasAttachments eq {query.HasAttachments.Value.ToString().ToLowerInvariant()}");
+        }
+
+        filterParts.AddRange(excludedFolderIds.Select(id => $"parentFolderId ne '{EscapeODataString(id)}'"));
+
+        var searchParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(query.Text))
+        {
+            searchParts.Add(query.Text);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Sender))
+        {
+            searchParts.Add($"from:\"{EscapeSearchValue(query.Sender)}\"");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.RecipientContains))
+        {
+            searchParts.Add($"recipients:\"{EscapeSearchValue(query.RecipientContains)}\"");
+        }
+
+        var parameters = new List<string>
+        {
+            "%24select=id%2Csubject%2Cfrom%2CtoRecipients%2CccRecipients%2CreceivedDateTime%2CbodyPreview%2CisRead%2ChasAttachments%2CparentFolderId",
+            "%24top=" + limit.ToString(CultureInfo.InvariantCulture),
+            "%24filter=" + Uri.EscapeDataString(string.Join(" and ", filterParts))
+        };
+
+        if (searchParts.Count > 0)
+        {
+            var escapedSearch = string.Join(" AND ", searchParts)
+                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("\"", "\\\"", StringComparison.Ordinal);
+            parameters.Insert(0, "%24search=" + Uri.EscapeDataString($"\"{escapedSearch}\""));
+        }
+        else
+        {
+            // The broad receivedDateTime lower bound is first in $filter so Graph accepts this $orderby.
+            parameters.Add("%24orderby=receivedDateTime%20DESC");
+        }
+
+        return "https://graph.microsoft.com/v1.0/me/messages?" + string.Join('&', parameters);
     }
+
+    private static async Task<IReadOnlyList<string>> ReadExcludedFolderIdsAsync(
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var ids = new List<string>(2);
+        foreach (var folder in new[] { "junkemail", "deleteditems" })
+        {
+            var url = $"https://graph.microsoft.com/v1.0/me/mailFolders/{folder}?%24select=id";
+            using var document = await GetJsonAsync(url, accessToken, preferText: false, cancellationToken);
+            var id = GetOptionalString(document.RootElement, "id");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ProviderReadException("Microsoft mail folder exclusions could not be verified.");
+            }
+
+            ids.Add(id);
+        }
+
+        return ids;
+    }
+
+    private static string FormatGraphDate(DateTimeOffset value) =>
+        value.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
+    private static string EscapeODataString(string value) => value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string EscapeSearchValue(string value) => value.Replace("\"", string.Empty, StringComparison.Ordinal);
 
     private static string ValidateNextLink(string cursor)
     {
@@ -278,6 +361,12 @@ public sealed class MicrosoftMailReader : IMailReader
     private static string? GetOptionalString(JsonElement parent, string propertyName) =>
         parent.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
             ? property.GetString()
+            : null;
+
+    private static bool? GetOptionalBoolean(JsonElement parent, string propertyName) =>
+        parent.TryGetProperty(propertyName, out var property) &&
+        (property.ValueKind == JsonValueKind.True || property.ValueKind == JsonValueKind.False)
+            ? property.GetBoolean()
             : null;
 
     private static string HtmlToText(string html)

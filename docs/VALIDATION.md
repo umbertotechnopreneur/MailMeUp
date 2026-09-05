@@ -8,7 +8,8 @@
 - **68 .NET tests passed:** storage, account isolation, failed reconnect, selective removal, transactional MSAL cache updates, credential locking/cancellation, partial reads, continuation limits and calendar boundaries.
 - Windows protected credential I/O and separate-process lock contention passed with synthetic data. Timeout tests cover cancellation classification; they do not wait for the actual 30-second deadline.
 - **24 manual-runner regression tests passed**, without starting MailMeUp or accessing real accounts. They cover CI refusal, 0/1-account rejection, dynamic 2/3/4-account runs, individual failures, missing consent, empty calendars, batching and sanitized output.
-- CLI/MCP process checks passed for all seven read-only tools, empty first-run reads, invalid references, JSON and private diagnostics on stderr.
+- CLI/MCP process checks passed for the seven original read-only tools, empty first-run reads, invalid references, JSON and private diagnostics on stderr.
+- The later unread/date-range mail tools, structured filters and default Spam/Junk plus Trash/Deleted exclusions are not covered by the validation runs recorded here.
 - Dependency inventory and repository data/link checks passed.
 
 ## Current real-provider results

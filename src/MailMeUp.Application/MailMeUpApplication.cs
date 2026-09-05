@@ -9,6 +9,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
 {
     private const int MaximumProviderPagesPerRefill = 20;
     private const int MaximumProviderCursorHistory = 512;
+    private const int MaximumConcurrentMailAccountReads = 4;
     private static readonly TimeSpan ProviderReadTimeout = TimeSpan.FromSeconds(30);
     private readonly IAccountStore _accounts;
     private readonly IReadOnlyList<ProviderDescriptor> _providers;
@@ -157,10 +158,10 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
     public async Task<MailSearchResult> SearchMailAsync(MailSearchRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var query = request.Query?.Trim();
-        if (string.IsNullOrWhiteSpace(query) || query.Length > 500)
+        var query = string.IsNullOrWhiteSpace(request.Query) ? null : request.Query!.Trim();
+        if (query is not null && query.Length > 500)
         {
-            throw new ArgumentException("Mail search text must contain 1 to 500 characters.", nameof(request));
+            throw new ArgumentException("Mail search text must contain at most 500 characters.", nameof(request));
         }
 
         if (request.Limit is < 1 or > 50)
@@ -168,11 +169,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             throw new ArgumentOutOfRangeException(nameof(request), "Mail search limit must be between 1 and 50.");
         }
 
-        var sender = string.IsNullOrWhiteSpace(request.Sender) ? null : request.Sender.Trim();
-        if (sender is not null && (sender.Length > 254 || sender.Any(char.IsControl)))
-        {
-            throw new ArgumentException("The optional mail sender is invalid.", nameof(request));
-        }
+        var sender = NormalizeOptionalContains(request.Sender, nameof(request.Sender), "sender");
+        var recipient = NormalizeOptionalContains(request.RecipientContains, nameof(request.RecipientContains), "recipient");
 
         var start = ParseOptionalExplicitDateTime(request.Start, nameof(request.Start));
         var end = ParseOptionalExplicitDateTime(request.End, nameof(request.End));
@@ -181,7 +179,21 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             throw new ArgumentException("The mail end time must be later than the start time.", nameof(request));
         }
 
-        var providerQuery = new ProviderMailQuery(query, sender, start, end);
+        var hasStructuredFilter = sender is not null || recipient is not null || start is not null || end is not null ||
+                                   request.UnreadOnly || request.HasAttachments is not null;
+        if (query is null && !hasStructuredFilter)
+        {
+            throw new ArgumentException("Mail search requires text or at least one structured filter.", nameof(request));
+        }
+
+        var providerQuery = new ProviderMailQuery(
+            query ?? string.Empty,
+            sender,
+            start,
+            end,
+            recipient,
+            request.UnreadOnly,
+            request.HasAttachments);
 
         var allAccounts = await _accounts.ListAsync(cancellationToken);
         MailCursorState state;
@@ -221,71 +233,16 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         }
 
         var accountsById = selectedAccounts.ToDictionary(account => account.Id, StringComparer.Ordinal);
-        foreach (var accountId in state.AccountIds)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var accountState = state.Accounts[accountId];
-            if (!accountsById.TryGetValue(accountId, out var account) || !account.MailReadEnabled)
-            {
-                accountState.Items.Clear();
-                accountState.Started = true;
-                accountState.NextProviderCursor = null;
-                accountState.Failure = "The source account is no longer available for mail reads.";
-                continue;
-            }
-
-            if (accountState.Items.Count >= request.Limit || accountState.Started && accountState.NextProviderCursor is null)
-            {
-                continue;
-            }
-
-            if (!_mailReaders.TryGetValue(account.Provider, out var reader))
-            {
-                accountState.Started = true;
-                accountState.NextProviderCursor = null;
-                accountState.Failure = "Mail reading is unavailable for this provider.";
-                continue;
-            }
-
-            try
-            {
-                await ReadWithDeadlineAsync(async token =>
-                {
-                    var pagesRead = 0;
-                    while (accountState.Items.Count < request.Limit &&
-                           (!accountState.Started || accountState.NextProviderCursor is not null))
-                    {
-                        token.ThrowIfCancellationRequested();
-                        if (++pagesRead > MaximumProviderPagesPerRefill)
-                        {
-                            throw new ProviderPaginationException();
-                        }
-
-                        var providerCursor = accountState.Started ? accountState.NextProviderCursor : null;
-                        RegisterProviderCursor(accountState.SeenProviderCursors, providerCursor);
-                        // Graph next links keep the initial page size; shrinking it could discard returned items.
-                        accountState.ProviderPageSize = accountState.ProviderPageSize == 0
-                            ? request.Limit
-                            : accountState.ProviderPageSize;
-                        var page = await reader.SearchAsync(
-                            account, providerQuery, accountState.ProviderPageSize, providerCursor, token);
-                        var next = ValidateProviderContinuation(accountState.SeenProviderCursors, page.NextCursor);
-                        accountState.Started = true;
-                        accountState.NextProviderCursor = next;
-                        accountState.Items.AddRange(page.Items);
-                        accountState.Failure = null;
-                    }
-
-                    return true;
-                }, cancellationToken);
-            }
-            catch (Exception exception) when (IsProviderReadFailure(exception, cancellationToken))
-            {
-                accountState.Started = true;
-                accountState.NextProviderCursor = null;
-                accountState.Failure = ReadFailureReason(exception);
-            }
-        }
+        using var accountReadGate = new SemaphoreSlim(MaximumConcurrentMailAccountReads);
+        var accountReads = state.Accounts.Select(pair => ReadMailAccountAsync(
+            pair.Key,
+            pair.Value,
+            accountsById,
+            providerQuery,
+            request.Limit,
+            accountReadGate,
+            cancellationToken));
+        await Task.WhenAll(accountReads);
 
         var candidates = state.Accounts
             .SelectMany(pair => pair.Value.Items.Select(item => new MailCandidate(pair.Key, item)))
@@ -308,7 +265,9 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 Compact(candidate.Item.Subject, 300),
                 Compact(candidate.Item.Sender, 200),
                 candidate.Item.ReceivedAt,
-                Compact(candidate.Item.Preview, 160)));
+                Compact(candidate.Item.Preview, 160),
+                candidate.Item.IsRead,
+                candidate.Item.HasAttachments));
         }
 
         var hasMore = state.Accounts.Values.Any(account =>
@@ -326,6 +285,86 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             failures,
             failures.Length == 0,
             nextCursor);
+    }
+
+    private async Task ReadMailAccountAsync(
+        string accountId,
+        AccountMailCursorState accountState,
+        IReadOnlyDictionary<string, Account> accountsById,
+        ProviderMailQuery providerQuery,
+        int limit,
+        SemaphoreSlim accountReadGate,
+        CancellationToken cancellationToken)
+    {
+        await accountReadGate.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!accountsById.TryGetValue(accountId, out var account) || !account.MailReadEnabled)
+            {
+                accountState.Items.Clear();
+                accountState.Started = true;
+                accountState.NextProviderCursor = null;
+                accountState.Failure = "The source account is no longer available for mail reads.";
+                return;
+            }
+
+            if (accountState.Items.Count >= limit || accountState.Started && accountState.NextProviderCursor is null)
+            {
+                return;
+            }
+
+            if (!_mailReaders.TryGetValue(account.Provider, out var reader))
+            {
+                accountState.Started = true;
+                accountState.NextProviderCursor = null;
+                accountState.Failure = "Mail reading is unavailable for this provider.";
+                return;
+            }
+
+            try
+            {
+                await ReadWithDeadlineAsync(async token =>
+                {
+                    var pagesRead = 0;
+                    while (accountState.Items.Count < limit &&
+                           (!accountState.Started || accountState.NextProviderCursor is not null))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (++pagesRead > MaximumProviderPagesPerRefill)
+                        {
+                            throw new ProviderPaginationException();
+                        }
+
+                        var providerCursor = accountState.Started ? accountState.NextProviderCursor : null;
+                        RegisterProviderCursor(accountState.SeenProviderCursors, providerCursor);
+                        // Graph next links keep the initial page size; shrinking it could discard returned items.
+                        accountState.ProviderPageSize = accountState.ProviderPageSize == 0
+                            ? limit
+                            : accountState.ProviderPageSize;
+                        var page = await reader.SearchAsync(
+                            account, providerQuery, accountState.ProviderPageSize, providerCursor, token);
+                        var next = ValidateProviderContinuation(accountState.SeenProviderCursors, page.NextCursor);
+                        accountState.Started = true;
+                        accountState.NextProviderCursor = next;
+                        accountState.Items.AddRange(page.Items.Where(item => MatchesMailFilters(providerQuery, item)));
+                        accountState.Failure = null;
+                    }
+
+                    return true;
+                }, cancellationToken);
+            }
+            catch (Exception exception) when (IsProviderReadFailure(exception, cancellationToken))
+            {
+                accountState.Started = true;
+                accountState.NextProviderCursor = null;
+                accountState.Failure = ReadFailureReason(exception);
+            }
+        }
+        finally
+        {
+            accountReadGate.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -369,7 +408,9 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             message.ReceivedAt,
             text,
             offset,
-            offset + length < message.PlainText.Length);
+            offset + length < message.PlainText.Length,
+            message.IsRead,
+            message.HasAttachments);
     }
 
     /// <inheritdoc />
@@ -844,6 +885,31 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
 
     private static DateTimeOffset? ParseOptionalExplicitDateTime(string? value, string parameterName) =>
         string.IsNullOrWhiteSpace(value) ? null : ParseExplicitDateTime(value, parameterName);
+
+    private static string? NormalizeOptionalContains(string? value, string parameterName, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > 254 || normalized.Any(char.IsControl))
+        {
+            throw new ArgumentException($"The optional mail {fieldName} filter is invalid.", parameterName);
+        }
+
+        return normalized;
+    }
+
+    private static bool MatchesMailFilters(ProviderMailQuery query, ProviderMailSummary item) =>
+        (!query.UnreadOnly || !item.IsRead) &&
+        (!query.HasAttachments.HasValue || item.HasAttachments == query.HasAttachments.Value) &&
+        (query.Sender is null || item.Sender.Contains(query.Sender, StringComparison.OrdinalIgnoreCase)) &&
+        (query.RecipientContains is null || item.Recipients is not null &&
+            item.Recipients.Any(recipient => recipient.Contains(query.RecipientContains, StringComparison.OrdinalIgnoreCase))) &&
+        (query.Start is null || item.ReceivedAt >= query.Start.Value) &&
+        (query.End is null || item.ReceivedAt < query.End.Value);
 
     private static IReadOnlyList<Account> SelectMailAccounts(
         IReadOnlyList<Account> allAccounts,

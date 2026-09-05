@@ -2,20 +2,26 @@ namespace MailMeUp.Core;
 
 /// <summary>Requests a compact mail search across selected accounts or all mail-enabled accounts.</summary>
 public sealed record MailSearchRequest(
-    string Query,
+    string? Query = null,
     IReadOnlyList<string>? AccountIds = null,
     int Limit = 20,
     string? Cursor = null,
     string? Sender = null,
     string? Start = null,
-    string? End = null);
+    string? End = null,
+    string? RecipientContains = null,
+    bool UnreadOnly = false,
+    bool? HasAttachments = null);
 
 /// <summary>Provider-neutral mail criteria translated by each provider adapter.</summary>
 public sealed record ProviderMailQuery(
     string Text,
     string? Sender,
     DateTimeOffset? Start,
-    DateTimeOffset? End);
+    DateTimeOffset? End,
+    string? RecipientContains = null,
+    bool UnreadOnly = false,
+    bool? HasAttachments = null);
 
 /// <summary>One short mail match suitable for an MCP response.</summary>
 public sealed record MailSearchItem(
@@ -24,7 +30,9 @@ public sealed record MailSearchItem(
     string Subject,
     string Sender,
     DateTimeOffset ReceivedAt,
-    string Preview);
+    string Preview,
+    bool IsRead = true,
+    bool HasAttachments = false);
 
 /// <summary>Identifies an account that could not be covered by a multi-account read.</summary>
 public sealed record AccountReadFailure(string AccountId, string Reason);
@@ -51,7 +59,9 @@ public sealed record MailMessageResult(
     DateTimeOffset ReceivedAt,
     string Text,
     int Offset,
-    bool MoreAvailable);
+    bool MoreAvailable,
+    bool IsRead = true,
+    bool HasAttachments = false);
 
 /// <summary>Provider-owned compact search item before a local short reference is assigned.</summary>
 public sealed record ProviderMailSummary(
@@ -59,7 +69,10 @@ public sealed record ProviderMailSummary(
     string Subject,
     string Sender,
     DateTimeOffset ReceivedAt,
-    string Preview);
+    string Preview,
+    bool IsRead = true,
+    bool HasAttachments = false,
+    IReadOnlyList<string>? Recipients = null);
 
 /// <summary>One provider search page with its opaque provider continuation.</summary>
 public sealed record ProviderMailSearchPage(IReadOnlyList<ProviderMailSummary> Items, string? NextCursor);
@@ -72,7 +85,9 @@ public sealed record ProviderMailMessage(
     IReadOnlyList<string> To,
     IReadOnlyList<string> Cc,
     DateTimeOffset ReceivedAt,
-    string PlainText);
+    string PlainText,
+    bool IsRead = true,
+    bool HasAttachments = false);
 
 /// <summary>Reads mail from one provider without exposing access tokens to the application layer.</summary>
 public interface IMailReader

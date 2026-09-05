@@ -98,6 +98,44 @@ public sealed class ApplicationReadTests
     }
 
     [Fact]
+    public async Task StructuredMailFiltersSelectUnreadMessagesWithMatchingRecipientsAndAttachments()
+    {
+        var account = new Account("google:test", "google", "Google", "google@example.test", true, false);
+        var google = new FakeMailReader(
+            "google",
+            new ProviderMailSearchPage(
+            [
+                new("match", "Match", "Acme Alerts <alerts@example.test>", Instant(10), "Match preview",
+                    IsRead: false, HasAttachments: true, Recipients: ["Team <team@example.test>"]),
+                new("read", "Read", "Acme Alerts <alerts@example.test>", Instant(11), "Read preview",
+                    IsRead: true, HasAttachments: true, Recipients: ["Team <team@example.test>"]),
+                new("no-attachment", "No attachment", "Acme Alerts <alerts@example.test>", Instant(12), "No attachment preview",
+                    IsRead: false, HasAttachments: false, Recipients: ["Team <team@example.test>"]),
+                new("wrong-recipient", "Wrong recipient", "Acme Alerts <alerts@example.test>", Instant(13), "Wrong recipient preview",
+                    IsRead: false, HasAttachments: true, Recipients: ["Other <other@example.test>"])
+            ]));
+        var application = CreateApplication([account], [google], []);
+
+        var result = await application.SearchMailAsync(new(
+            Query: null,
+            Sender: "acme",
+            Start: "2026-09-05T00:00:00Z",
+            End: "2026-09-06T00:00:00Z",
+            RecipientContains: "team@example.test",
+            UnreadOnly: true,
+            HasAttachments: true));
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal("Match", item.Subject);
+        Assert.False(item.IsRead);
+        Assert.True(item.HasAttachments);
+        Assert.Equal("acme", google.LastQuery?.Sender);
+        Assert.Equal("team@example.test", google.LastQuery?.RecipientContains);
+        Assert.True(google.LastQuery?.UnreadOnly == true);
+        Assert.True(google.LastQuery?.HasAttachments == true);
+    }
+
+    [Fact]
     public async Task CalendarResultsStayBoundToTheirAccountAndUseBoundedDetails()
     {
         var googleAccount = new Account("google:test", "google", "Google", "google@example.test", false, true);

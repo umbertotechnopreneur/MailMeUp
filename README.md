@@ -20,6 +20,7 @@ Bring your email and appointments from multiple Google and Microsoft accounts in
 ## What it will do
 
 - Search across Gmail, Google Workspace, Outlook.com and Microsoft 365 inboxes.
+- List unread messages or messages in a received-time range, with optional sender, recipient and attachment filters.
 - Show appointments from Google Calendar and Microsoft calendars.
 - Let you choose which accounts and calendars to include.
 - Return short results first, then open the details you need.
@@ -33,7 +34,7 @@ MailMeUp runs on your computer. Each user connects their own accounts. No market
 > [!IMPORTANT]
 > **Provider setup is currently required.** To connect Google or Microsoft accounts, each user must currently register their own OAuth desktop application and configure its Client ID locally. Google also requires the downloaded desktop client configuration file; Microsoft requires its Application (client) ID. No provider credentials are bundled with MailMeUp. Follow the [provider setup and CLI guide](docs/APP_REGISTRATION.md). We are actively working on a simpler onboarding experience.
 
-The current source includes local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Client credentials and account token caches use operating-system protection. Read-only flows have been exercised with two Google and two Microsoft accounts on Windows without including account content in the validation output.
+The current source includes local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Mail searches exclude Spam/Junk and Trash/Deleted Items by default. Client credentials and account token caches use operating-system protection. Read-only flows have been exercised with two Google and two Microsoft accounts on Windows without including account content in the validation output.
 
 The Windows build passed 68 automated tests and read-only checks across four real accounts. Recovery, partial results and calendar boundaries have synthetic regression coverage; clean installation and the pilot remain. See the [validation record](docs/VALIDATION.md) and [account recovery guide](docs/RECOVERY.md).
 

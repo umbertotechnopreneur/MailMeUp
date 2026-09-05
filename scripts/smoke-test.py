@@ -126,8 +126,8 @@ def main():
             send({"method": "notifications/initialized"})
             send({"id": 2, "method": "tools/list"})
             tools = receive(2)["result"]["tools"]
-            expected_tools = {"get_status", "list_accounts", "search_mail", "read_mail",
-                              "list_calendars", "search_events", "read_event"}
+            expected_tools = {"get_status", "list_accounts", "search_mail", "search_unread_mail",
+                              "search_mail_by_date", "read_mail", "list_calendars", "search_events", "read_event"}
             check({tool["name"] for tool in tools} == expected_tools, "Unexpected tool surface")
             check(all(tool["annotations"]["readOnlyHint"] for tool in tools), "Missing read-only hints")
             send({"id": 3, "method": "tools/call", "params": {"name": "get_status", "arguments": {}}})
@@ -137,15 +137,22 @@ def main():
             send({"id": 5, "method": "tools/call", "params": {"name": "search_mail", "arguments": {"query": "private-query-sentinel@example.test"}}})
             mail = content(receive(5))
             check(mail["items"] == [] and mail["coverage_complete"] is True, "Unexpected empty mail search")
-            send({"id": 6, "method": "tools/call", "params": {"name": "list_calendars", "arguments": {}}})
-            calendars = content(receive(6))
-            check(calendars["calendars"] == [] and calendars["coverage_complete"] is True, "Unexpected empty calendar list")
-            send({"id": 7, "method": "tools/call", "params": {"name": "search_events", "arguments": {
+            send({"id": 6, "method": "tools/call", "params": {"name": "search_unread_mail", "arguments": {}}})
+            unread = content(receive(6))
+            check(unread["items"] == [] and unread["coverage_complete"] is True, "Unexpected empty unread mail search")
+            send({"id": 7, "method": "tools/call", "params": {"name": "search_mail_by_date", "arguments": {
                 "start": "2026-09-05T00:00:00+07:00", "end": "2026-09-06T00:00:00+07:00"}}})
-            events = content(receive(7))
+            dated = content(receive(7))
+            check(dated["items"] == [] and dated["coverage_complete"] is True, "Unexpected empty date mail search")
+            send({"id": 8, "method": "tools/call", "params": {"name": "list_calendars", "arguments": {}}})
+            calendars = content(receive(8))
+            check(calendars["calendars"] == [] and calendars["coverage_complete"] is True, "Unexpected empty calendar list")
+            send({"id": 9, "method": "tools/call", "params": {"name": "search_events", "arguments": {
+                "start": "2026-09-05T00:00:00+07:00", "end": "2026-09-06T00:00:00+07:00"}}})
+            events = content(receive(9))
             check(events["events"] == [] and events["coverage_complete"] is True, "Unexpected empty event search")
-            for identifier, name, arguments in ((8, "read_mail", {"reference": "m_private-reference-sentinel"}),
-                                                (9, "read_event", {"reference": "evt_invalid"})):
+            for identifier, name, arguments in ((10, "read_mail", {"reference": "m_private-reference-sentinel"}),
+                                                (11, "read_event", {"reference": "evt_invalid"})):
                 send({"id": identifier, "method": "tools/call", "params": {"name": name, "arguments": arguments}})
                 rejected = receive(identifier)
                 check("error" in rejected or rejected.get("result", {}).get("isError", False),
@@ -165,7 +172,7 @@ def main():
         check("private-query-sentinel" not in diagnostics and "m_private-reference-sentinel" not in diagnostics,
               "Verbose MCP diagnostics disclosed request arguments")
         check("\x1b" not in diagnostics, "MCP diagnostics contain ANSI escapes")
-    print("PASS: CLI options, JSON, private stderr logs, seven MCP tools, empty reads, invalid references, and stateless first run.")
+    print("PASS: CLI options, JSON, private stderr logs, nine MCP tools, empty reads, invalid references, and stateless first run.")
 
 
 if __name__ == "__main__":

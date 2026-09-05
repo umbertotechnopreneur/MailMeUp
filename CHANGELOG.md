@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.1 — Mail search ergonomics
+
+- Add dedicated unread and received-date-range mail tools with sender/recipient contains and attachment filters; exclude Gmail Spam/Trash and Microsoft Junk/Deleted Items by default.
+- Return read status and attachment presence in compact mail results, and run independent account searches with bounded concurrency.
 - Preserve existing credentials after failed reconnect validation or metadata persistence, and coordinate credential sessions across processes.
 - Bound provider reads and continuation work; report timeouts, removed accounts and incomplete calendar discovery as partial coverage.
 - Handle calendar null fields and all-day/time-zone boundaries without silently guessing missing event times.
