@@ -36,7 +36,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 ## 🧪 2. Connect accounts safely — source prepared, 0% verified
 
 - 🧪 **2.1** Browser sign-in, account choice and mail/calendar scope choices compile and have local contract coverage; interactive provider checks remain.
-- 🧪 **2.2** Provider credentials and account token caches use operating-system protection in source; persistence on each supported OS remains to be checked.
+- 🧪 **2.2** Provider credentials and account token caches use operating-system protection. Windows round-trip and plaintext exclusion pass; macOS and Linux remain.
 - 🧪 **2.3** Multiple identity slots, reconnect and local account removal are implemented in source. Restart and expired-access behavior still need real-provider checks.
 
 **Ready when:** several accounts remain usable after restarting, and a missing or locked credential store produces a clear error.

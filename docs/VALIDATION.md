@@ -5,7 +5,8 @@ Checked locally on Windows on 2026-09-05 using synthetic `example.test` data and
 ## Passed
 
 - Locked dependency restore, formatting check and Release build with zero warnings or errors.
-- Fifteen account, storage, provider setup, cross-account mail, calendar, pagination and readiness tests.
+- Sixteen account, storage, provider setup, protected credential, cross-account mail, calendar, pagination and readiness tests.
+- Windows protected storage round-trip, deletion and plaintext-file exclusion using a synthetic token.
 - Real CLI/MCP process checks for all seven tools, empty first-run reads, invalid references and read-only annotations.
 - Dependency inventory, local-data rules and documentation links.
 

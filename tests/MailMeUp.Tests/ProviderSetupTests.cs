@@ -60,6 +60,38 @@ public sealed class ProviderSetupTests : IDisposable
         Assert.Null(configuration.ClientSecretReference);
     }
 
+    [Fact]
+    public async Task WindowsProtectedStoreRoundTripsWithoutWritingPlaintext()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var protectedDirectory = Path.Combine(_directory, "protected-store");
+        var store = new OsProtectedSecretStore(protectedDirectory);
+        const string reference = "tests/synthetic-token";
+        const string value = "synthetic-token-value-example.test";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(value);
+        try
+        {
+            await store.WriteAsync(reference, bytes);
+            var restored = await store.ReadAsync(reference);
+            Assert.NotNull(restored);
+            Assert.Equal(value, System.Text.Encoding.UTF8.GetString(restored));
+            Assert.All(
+                Directory.EnumerateFiles(protectedDirectory, "*", SearchOption.AllDirectories),
+                file => Assert.DoesNotContain(value, System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(file)), StringComparison.Ordinal));
+
+            await store.DeleteAsync(reference);
+            Assert.Null(await store.ReadAsync(reference));
+        }
+        finally
+        {
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes);
+        }
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory))
