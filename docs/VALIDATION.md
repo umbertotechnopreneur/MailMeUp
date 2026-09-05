@@ -1,19 +1,20 @@
 # Foundation validation
 
-Validation uses synthetic data and no provider credentials. Last updated: 2026-09-05.
+Checked on 2026-09-05 using synthetic data and no provider credentials.
 
-## Verified locally on Windows x64
+## Passed
 
-- .NET 10 Release build: zero warnings and zero errors.
-- Nine tests: account persistence, same-address provider isolation, parameterized input, updates, concurrent initialization, schema rejection, relative paths and truthful readiness.
-- Process-level smoke test: help/version/status/accounts, invalid-command exit behavior, real stdio initialization, tool discovery, read-only annotations, tool calls and unavailable-tool errors.
-- Discovery against a fresh data directory creates no files.
-- Two generated PNGs inspected for concept clarity and readable English; originals copied into the repository.
+- Release build with zero warnings or errors; nine account integrity and readiness tests.
+- Real CLI/MCP process checks: startup, discovery, tool calls, read-only status and no files created during first-run discovery.
+- Local Windows x64 executable tested before and after ZIP extraction; checksum verified.
+- CI on Windows, Linux and macOS.
+- Six portable packages produced: x64 and ARM64 for each operating system.
+- Documentation links, dependency inventory and generated concept artwork reviewed.
 
-## Remaining foundation verification
+The first complete package rehearsal is recorded in [this successful run](https://github.com/umbertotechnopreneur/MailMeUp/actions/runs/33943689252). Later checks are available in the [workflow history](https://github.com/umbertotechnopreneur/MailMeUp/actions).
 
-- Full repository validation, native portable package smoke and remote CI/release rehearsal are being completed.
+## Limits
 
-## Outside this milestone
+Native package smoke tests run only when the runner matches the target CPU. Other packages record that native execution was not tested.
 
-No Google/Microsoft authorization, token vault, real-mail operation or native credential-store integration has been tested because those features are not implemented. No release has been published. Cross-architecture compilation must not be represented as native execution.
+Real account sign-in, protected credentials, mail and calendar operations are not implemented or tested. Provider scope remains read-only. No release was published.

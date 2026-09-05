@@ -8,5 +8,7 @@
 - Add CI, portable release automation and protocol smoke tests.
 - Document product scope, OAuth/token design, compact search contracts and Codex setup.
 - Add the MailMeUp brand guide and generated concept artwork.
+- Include Google Calendar and Microsoft appointments in the architecture and roadmap, with separate capability readiness.
+- Make the read-only scope explicit in status output, the README and concise product documentation.
 
-Account authentication, credential storage implementations and mail operations are not included.
+Account authentication, credential storage implementations, mail and calendar operations are not included.

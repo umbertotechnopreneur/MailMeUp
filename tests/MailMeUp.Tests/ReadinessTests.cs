@@ -17,12 +17,14 @@ public sealed class ReadinessTests
 
         var status = application.GetStatus();
         Assert.Equal("foundation", status.Stage);
+        Assert.True(status.ReadOnly);
         Assert.False(status.CanConnectAccounts);
         Assert.Equal(2, status.Providers.Count);
         Assert.All(status.Providers, provider =>
         {
             Assert.False(provider.AuthenticationAvailable);
             Assert.False(provider.MailReadAvailable);
+            Assert.False(provider.CalendarReadAvailable);
         });
     }
 }

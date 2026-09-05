@@ -2,7 +2,9 @@
 
 All your inboxes. One conversation.
 
-This pre-alpha build provides CLI discovery and an MCP stdio endpoint. Google/Microsoft sign-in, protected token storage and mail operations are not implemented yet.
+This pre-alpha build provides CLI discovery and an MCP stdio endpoint. Google/Microsoft sign-in, protected token storage, mail and calendar operations are not implemented yet.
+
+Current scope is read-only: no sending mail, changing or deleting provider data, creating appointments or sending invitations.
 
 Run `mailmeup --help`, `mailmeup status` or `mailmeup accounts list` (use `mailmeup.exe` on Windows). A new installation has no accounts. A self-contained build does not require the .NET SDK, but still requires a compatible OS and its standard .NET native dependencies.
 

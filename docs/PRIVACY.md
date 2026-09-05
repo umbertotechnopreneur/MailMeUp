@@ -1,15 +1,21 @@
-# Privacy and data boundaries
+# Privacy
 
-The foundation does not contact Google, Microsoft or an LLM service. It contains no analytics or telemetry integration. It can read account metadata from a local SQLite registry; first-run status and account discovery create no files.
+The foundation does not connect to Google, Microsoft or an AI service. It has no analytics integration and stores no real mail or calendar content.
 
-## Planned data flow
+## Read-only scope
 
-Provider credentials stay in OS-protected local storage and are used by the local process to call provider APIs. Headers and message text requested through MCP are returned to the client. The client may include them in prompts sent to its model service according to that client's configuration and terms. **Local credential storage is not a promise that email content never leaves the device.**
+Future provider access is limited to reading and searching. MailMeUp will not send messages, modify provider data, delete messages or appointments, or send invitations.
 
-## Storage and logs
+Local setup and caching still need local storage.
 
-The database is not encrypted by this foundation. Account labels and email addresses are personal data even though they are not credentials. Use a private per-user directory. Unix directory creation requests owner-only permissions; an existing directory's permissions are not rewritten. Windows uses the selected directory's inherited permissions. Shared or synchronized directories are not an appropriate credential location.
+## Local does not mean offline
 
-No message cache exists yet. A future cache needs explicit retention, clear-cache behavior and documented fields. Do not log mail bodies, subjects, access/refresh tokens, MSAL cache contents or authorization headers. Diagnostic errors exposed by the CLI omit exception messages that may contain paths or account data.
+Credentials stay on your computer in protected storage. Information requested through MailMeUp is returned to the assistant, which may send it to its AI service.
 
-Future account removal must distinguish deleting local credentials and cached metadata from revoking the provider grant. Document both operations; local deletion alone cannot promise provider-side revocation.
+Email text, event titles, attendees and meeting links can all be sensitive. Return only what is needed.
+
+## Storage
+
+SQLite is for account metadata and optional future caches, not tokens. The foundation database is not encrypted; use a private user directory. No message or calendar cache exists yet.
+
+Logs must exclude message content, meeting details and credentials. Future account removal must explain the difference between deleting local data and revoking access at the provider.

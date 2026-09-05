@@ -1,44 +1,38 @@
-# Release process
+# Releases
 
-GitHub distributes source and portable executable archives. There is no marketplace or hosted deployment. CI validates code; the release workflow publishes binaries to artifacts and creates a **draft** release only for a version tag.
+GitHub distributes source and executable archives. There is no hosted deployment or marketplace.
 
-## Runtime matrix
+## Packages
 
-| Runtime | Archive | Packaging host |
-| --- | --- | --- |
-| win-x64 | ZIP | Windows |
-| win-arm64 | ZIP | Windows |
-| linux-x64 | tar.gz | Linux |
-| linux-arm64 | tar.gz | Linux |
-| osx-x64 | tar.gz | macOS |
-| osx-arm64 | tar.gz | macOS |
+Windows, Linux and macOS each have x64 and ARM64 targets. Windows uses ZIP; Unix uses tar.gz.
 
-Packages are self-contained .NET 10, single-file application bundles with native library extraction, plus README, license texts, dependency notices and `BUILD_INFO.txt`. End users need neither the SDK nor Python. Linux targets use glibc; musl/Alpine is not included. Standard .NET native OS dependencies still apply.
+Each package includes the application, .NET runtime, license notices, version/commit information and a SHA-256 checksum. Linux targets use glibc, not musl/Alpine.
 
-Native smoke tests run when runner OS/CPU match the target. Cross-architecture packages are compiled and explicitly marked `SmokeTest=not-run-cross-architecture`; compilation is not evidence of native execution. Before claiming public platform support, test installation and future OS credential integration on each target.
+A native smoke test runs when the runner matches the target CPU. Other packages explicitly record that native execution was not tested.
 
 ## Rehearse
 
-Use **Actions → Portable release → Run workflow** on `main`. This runs validation and builds all six archives as workflow artifacts without creating a tag or release. Locally, from a clean committed checkout on the target OS:
+Run **Actions > Portable release > Run workflow** on `main`. It builds six archives as workflow artifacts, without creating a release.
+
+Local Windows example, from a clean committed checkout:
 
 ```powershell
 pwsh -NoProfile -File scripts/package.ps1 -Runtime win-x64
 ```
 
-The output lives under ignored `artifacts/`. The script refuses to overwrite an existing package directory or archive. Move a previous result aside before rerunning the same version/runtime.
+Output is under `artifacts/`. Existing packages are not overwritten.
 
-## Cut a release
+## Publish later
 
-1. Set the version in `Directory.Build.props`; update the changelog, documentation and dependency inventory.
-2. Merge a reviewed, passing commit into `main` and finish native/manual validation for the release scope.
-3. When release publication is authorized, create and push the exact `v<Version>` tag (for example `v0.1.0-alpha.1`).
-4. The workflow verifies the tag matches the project version and its commit is reachable from `main`, then validates and packages.
-5. Review the generated draft release, checksums, notices and platform evidence. Mark prereleases as appropriate before manually publishing.
+1. Update version, changelog and validation evidence.
+2. Merge passing code into `main`.
+3. Only when authorized, push the matching `v<Version>` tag.
+4. Review the generated draft release and manually publish it.
 
-Workflow dispatch never publishes a release. Release reruns do not overwrite an existing draft automatically; inspect the failed run and existing draft before deciding how to resume.
+Dispatch never publishes a release. A tag must match the project version and point to code reachable from `main`.
 
-## Supply chain and signing
+## Current limits
 
-Actions are pinned by commit; NuGet dependencies are locked. Archives have SHA-256 sidecars and include the Git commit. A checksum detects file changes but is not a publisher signature. Authenticode signing, Apple notarization and build attestations are not configured in this foundation. Document those gaps for public previews and add signing only after the maintainer chooses the required certificates and process.
+The foundation is read-only and cannot access real accounts yet. Binaries are unsigned; Authenticode, Apple notarization and attestations are not configured. Checksums detect changes but are not publisher signatures.
 
-No OAuth client secrets, tokens or real account data belong in Actions secrets or build artifacts. Future account authorization happens on each user's machine.
+No provider credentials belong in builds or release artifacts.

@@ -6,5 +6,5 @@ namespace MailMeUp.Providers.Google;
 public sealed class GoogleProviderModule : IProviderModule
 {
     /// <inheritdoc />
-    public ProviderDescriptor Descriptor { get; } = new("google", "Gmail and Google Workspace", false, false);
+    public ProviderDescriptor Descriptor { get; } = new("google", "Gmail and Google Calendar", false, false, false);
 }

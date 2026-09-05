@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>mailmeup</AssemblyName>
     <RootNamespace>MailMeUp.Cli</RootNamespace>
-    <Description>A local multi-account email bridge for MCP clients.</Description>
+    <Description>A local, read-only email and calendar bridge for MCP clients.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../MailMeUp.Application/MailMeUp.Application.csproj" />

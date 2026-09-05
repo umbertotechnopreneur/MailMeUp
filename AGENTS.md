@@ -1,6 +1,6 @@
 # Repository working agreement
 
-MailMeUp is an MIT-licensed, local .NET 10 email MCP bridge. All repository artifacts, code comments, CLI strings and commit messages use English. Keep conversation with the owner in their preferred language.
+MailMeUp is an MIT-licensed, local .NET 10 email and calendar MCP bridge. All repository artifacts, code comments, CLI strings and commit messages use English. Keep conversation with the owner in their preferred language.
 
 ## Scope and architecture
 
@@ -10,6 +10,8 @@ MailMeUp is an MIT-licensed, local .NET 10 email MCP bridge. All repository arti
 - Add XML summaries to public APIs. Use dependency injection and `ILogger<T>` for future diagnostics.
 - Advertise only implemented capabilities. Do not register placeholder mail tools or simulate successful sign-in.
 - Do not add a hosted service, marketplace bundle or web UI without a scoped request.
+- Current provider scope is strictly read-only: no sending, editing, deleting, event creation or invitations. Local configuration/cache writes are separate. Any provider-write feature requires a new explicit scope decision.
+- Keep public documentation short and plain. Put technical details in focused developer references.
 
 ## Data and execution
 

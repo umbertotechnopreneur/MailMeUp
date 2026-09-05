@@ -1,25 +1,31 @@
 # Development
 
-Use .NET SDK 10.0.400 (latest patch roll-forward), PowerShell 7 and Python 3.10+. Package versions are central in `Directory.Packages.props`; commit each `packages.lock.json`. `NuGet.Config` uses only nuget.org.
+Requirements: .NET SDK from `global.json`, PowerShell 7 and Python 3.10+. End users will not need these development tools.
 
 ```powershell
 pwsh -NoProfile -File scripts/validate.ps1
 ```
 
-The script restores in locked mode, verifies formatting, builds with warnings as errors, runs tests, starts the real CLI/MCP process, verifies the dependency inventory and checks local documentation links/obvious accidental data inclusion. It never contacts a mailbox or uses a real user registry.
+This restores locked dependencies, checks formatting, builds with warnings as errors, runs tests and verifies the real CLI/MCP process. It also checks dependency notices and local document links. No real account credentials are used.
 
-After intentionally changing packages:
+To run the built foundation:
 
 ```sh
-dotnet restore MailMeUp.slnx --force-evaluate
-python scripts/export-notices.py
-dotnet format MailMeUp.slnx --no-restore
+dotnet run --project src/MailMeUp.Cli -c Release --no-build -- status
 ```
 
-Review lock files and `docs/DEPENDENCIES.md`, then run the full validation script. `scripts/repo-check.py` is a lightweight local-data check, not a comprehensive secret scanner or security audit.
+## Dependency updates
 
-Portable publishing uses a separate checked-in dependency graph under `eng/locks/<runtime>/` because single-file builds add SDK build tools and runtime targets. After an SDK or dependency update, regenerate those graphs with `pwsh -NoProfile -File scripts/update-portable-locks.ps1` and review them as well.
+Versions live in `Directory.Packages.props`. After an intentional update:
 
-CI runs the same validation on Windows, Linux and macOS. Use `MAILMEUP_DATA_DIR` for any runtime experiment that needs storage. Provider tests must be opt-in and isolated when introduced; ordinary CI must remain credential-free.
+```powershell
+dotnet restore MailMeUp.slnx --force-evaluate
+python scripts/export-notices.py
+pwsh -NoProfile -File scripts/update-portable-locks.ps1
+```
 
-`MailMeUp.slnx` can be opened with tooling that supports the modern solution format. The SDK builds it directly; no IDE is required.
+Review the standard lock files and `eng/locks/<runtime>/`. Portable builds have separate graphs because they add runtime targets and packaging tools.
+
+Use `MAILMEUP_DATA_DIR` for isolated experiments. Keep code and documents in English. Provider features remain read-only; local metadata storage can still write.
+
+See [contribution guidance](../CONTRIBUTING.md) and [release steps](RELEASING.md).

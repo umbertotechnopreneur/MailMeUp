@@ -6,5 +6,5 @@ namespace MailMeUp.Providers.Microsoft;
 public sealed class MicrosoftProviderModule : IProviderModule
 {
     /// <inheritdoc />
-    public ProviderDescriptor Descriptor { get; } = new("microsoft", "Outlook.com and Microsoft 365", false, false);
+    public ProviderDescriptor Descriptor { get; } = new("microsoft", "Microsoft mail and calendars", false, false, false);
 }

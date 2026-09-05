@@ -13,7 +13,7 @@ public sealed class MailTools(IMailMeUpApplication application)
 
     /// <summary>Reports readiness without disclosing local paths or credentials.</summary>
     [McpServerTool(Name = "get_status", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Report MailMeUp readiness. This foundation cannot authenticate accounts or read mail yet.")]
+    [Description("Report MailMeUp readiness. This foundation cannot authenticate accounts, read mail or access calendars yet.")]
     public JsonElement GetStatus() => JsonSerializer.SerializeToElement(application.GetStatus(), JsonOptions);
 
     /// <summary>Lists local account metadata without reading message contents.</summary>

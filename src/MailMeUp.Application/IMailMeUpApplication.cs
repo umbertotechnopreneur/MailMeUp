@@ -13,4 +13,4 @@ public interface IMailMeUpApplication
 }
 
 /// <summary>Describes capabilities available in the running build.</summary>
-public sealed record ApplicationStatus(string Stage, string Transport, bool CanConnectAccounts, IReadOnlyList<ProviderDescriptor> Providers);
+public sealed record ApplicationStatus(string Stage, string Transport, bool ReadOnly, bool CanConnectAccounts, IReadOnlyList<ProviderDescriptor> Providers);

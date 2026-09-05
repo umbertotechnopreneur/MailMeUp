@@ -19,7 +19,7 @@ if (args.Length == 0 || args is ["--help"] or ["-h"])
     }
 
     Console.WriteLine("""
-        MailMeUp — local email MCP bridge (foundation)
+        MailMeUp — local email and calendar MCP bridge (foundation)
 
         Usage:
           mailmeup --stdio          Run the MCP server on stdin/stdout
@@ -29,7 +29,7 @@ if (args.Length == 0 || args is ["--help"] or ["-h"])
           mailmeup --help           Show this help
 
         MAILMEUP_DATA_DIR overrides the per-user data directory (absolute path).
-        Account authentication and mail retrieval are not implemented yet.
+        Account authentication, mail retrieval and calendar access are not implemented yet.
         """);
     return 0;
 }

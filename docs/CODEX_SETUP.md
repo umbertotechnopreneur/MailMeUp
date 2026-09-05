@@ -1,51 +1,43 @@
-# Connect MailMeUp to Codex
+# Connect to Codex
 
-This project ships a standalone MCP executable. No marketplace account or plugin bundle is necessary. The foundation exposes only `get_status` and `list_accounts`; email tools appear only after later milestones.
+MailMeUp is a local MCP program. No marketplace is required.
 
-## Register a published executable
+**The foundation exposes status and account listing only. Real email and calendar access is still planned, with read-only permissions.**
 
-Extract the archive for your operating system and CPU into a stable directory you control. Do not register a path inside a temporary download/extraction directory.
+## 1. Build or extract
 
-Windows:
+Developers can follow [the build guide](DEVELOPMENT.md). For portable packages, extract the matching OS/CPU archive into a stable folder.
+
+## 2. Register the program
+
+Windows example:
 
 ```powershell
 codex mcp add mailmeup -- 'C:\Tools\MailMeUp\mailmeup.exe' --stdio
 ```
 
-Linux/macOS:
+Linux/macOS example:
 
 ```sh
 codex mcp add mailmeup -- /absolute/path/mailmeup --stdio
 ```
 
-For local source development, build first and register the DLL instead:
+Local source-build example:
 
 ```powershell
 codex mcp add mailmeup -- dotnet 'E:\MailMeUp\src\MailMeUp.Cli\bin\Release\net10.0\mailmeup.dll' --stdio
 ```
 
-## Equivalent TOML
+Use your own absolute path. Codex starts the process; you do not start another server manually.
 
-Add this to the Codex configuration file used by your installation (normally `~/.codex/config.toml`), adapting the absolute path:
+## 3. Check it
 
-```toml
-[mcp_servers.mailmeup]
-command = 'C:\Tools\MailMeUp\mailmeup.exe'
-args = ["--stdio"]
-```
+Run `codex mcp list`. Reload the Codex task/app if necessary, then ask:
 
-An optional `[mcp_servers.mailmeup.env]` table can set `MAILMEUP_DATA_DIR` to an absolute private path. Do not put provider tokens or passwords in Codex configuration.
+> Use MailMeUp to show its status and list configured accounts.
 
-## Verify
+An empty list is expected today. Future mailbox sign-in will happen through MailMeUp, not `codex mcp login`.
 
-Run `codex mcp list` and `codex mcp get mailmeup`. Reload the Codex task/app if the current session has not refreshed its tool inventory. Ask: **“Use MailMeUp to show its status and list configured accounts.”** An empty account list is expected until authentication is implemented.
+Remove the registration with `codex mcp remove mailmeup`. This does not delete data or revoke provider access.
 
-Codex launches and owns the child process. You do not need to start a second copy manually. There is no URL, port or MCP bearer token to configure for stdio. `codex mcp login` is not the future Google/Microsoft mailbox sign-in mechanism; that will be a MailMeUp account setup command.
-
-Remove the registration with `codex mcp remove mailmeup`. This changes client configuration; it does not delete application data or revoke provider grants.
-
-## Troubleshooting
-
-Check the absolute executable path, executable permissions on Unix, and architecture. A framework-dependent DLL needs the .NET 10 runtime; a self-contained release includes it. Never launch through a shell wrapper that prints a banner on stdout. Native library extraction may need a writable per-user temporary directory.
-
-The configuration syntax was checked against the local Codex CLI and [OpenAI's MCP documentation](https://developers.openai.com/codex/mcp/) on 2026-09-05. Client UI labels may vary by version.
+Reference: [OpenAI MCP setup](https://developers.openai.com/codex/mcp/), checked alongside the local CLI on 2026-09-05.

@@ -8,6 +8,8 @@ Tagline: **All your inboxes. One conversation.**
 
 One-line description: **A local email bridge that brings multiple accounts into your AI conversation.**
 
+Expanded product description: **Email and calendars from multiple accounts, available through one local MCP bridge.** The current illustrations show the email workflow; calendars are part of the documented roadmap.
+
 The identity shares the practical, personal naming rhythm of PromptMeUp and TrackMeUp. The visual idea is convergence: several envelopes become one useful conversation.
 
 ## Visual vocabulary

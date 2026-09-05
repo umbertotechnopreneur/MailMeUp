@@ -31,7 +31,10 @@ def main():
             result = subprocess.run(command + cli_args, env=environment, capture_output=True, text=True, timeout=30, check=True)
             check(bool(result.stdout.strip()), f"Empty output for {cli_args}")
             if cli_args == ["status"]:
-                check(json.loads(result.stdout)["can_connect_accounts"] is False, "Foundation advertised OAuth")
+                status = json.loads(result.stdout)
+                check(status["can_connect_accounts"] is False, "Foundation advertised OAuth")
+                check(status["read_only"] is True, "Read-only scope was not reported")
+                check(all(not provider["calendar_read_available"] for provider in status["providers"]), "Foundation advertised calendar access")
             if cli_args == ["accounts", "list"]:
                 check(json.loads(result.stdout) == {"accounts": []}, "Unexpected account data")
         invalid = subprocess.run(command + ["unknown"], env=environment, capture_output=True, text=True, timeout=30)

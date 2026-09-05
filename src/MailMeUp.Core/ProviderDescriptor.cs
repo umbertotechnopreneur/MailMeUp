@@ -1,7 +1,7 @@
 namespace MailMeUp.Core;
 
 /// <summary>Reports a provider's actual implementation readiness.</summary>
-public sealed record ProviderDescriptor(string Id, string DisplayName, bool AuthenticationAvailable, bool MailReadAvailable);
+public sealed record ProviderDescriptor(string Id, string DisplayName, bool AuthenticationAvailable, bool MailReadAvailable, bool CalendarReadAvailable);
 
 /// <summary>Exposes provider readiness without pretending that mail operations are implemented.</summary>
 public interface IProviderModule
