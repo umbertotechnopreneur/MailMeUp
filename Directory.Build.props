@@ -15,4 +15,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MailMeUpPortableBuild)' == 'true'">
+    <NuGetLockFilePath>$(MSBuildThisFileDirectory)eng/locks/$(RuntimeIdentifier)/$(MSBuildProjectName).json</NuGetLockFilePath>
+  </PropertyGroup>
 </Project>

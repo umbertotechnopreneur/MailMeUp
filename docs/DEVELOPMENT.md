@@ -18,6 +18,8 @@ dotnet format MailMeUp.slnx --no-restore
 
 Review lock files and `docs/DEPENDENCIES.md`, then run the full validation script. `scripts/repo-check.py` is a lightweight local-data check, not a comprehensive secret scanner or security audit.
 
+Portable publishing uses a separate checked-in dependency graph under `eng/locks/<runtime>/` because single-file builds add SDK build tools and runtime targets. After an SDK or dependency update, regenerate those graphs with `pwsh -NoProfile -File scripts/update-portable-locks.ps1` and review them as well.
+
 CI runs the same validation on Windows, Linux and macOS. Use `MAILMEUP_DATA_DIR` for any runtime experiment that needs storage. Provider tests must be opt-in and isolated when introduced; ordinary CI must remain credential-free.
 
 `MailMeUp.slnx` can be opened with tooling that supports the modern solution format. The SDK builds it directly; no IDE is required.

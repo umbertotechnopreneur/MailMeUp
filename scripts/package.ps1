@@ -31,7 +31,7 @@ try {
     dotnet publish src/MailMeUp.Cli/MailMeUp.Cli.csproj -c Release -r $Runtime --self-contained true `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false `
         -p:DebugType=None -p:DebugSymbols=false -p:GenerateDocumentationFile=false `
-        -p:ContinuousIntegrationBuild=true -p:RestoreLockedMode=true --output $payload
+        -p:ContinuousIntegrationBuild=true -p:MailMeUpPortableBuild=true -p:RestoreLockedMode=true --output $payload
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
 
     Copy-Item -LiteralPath LICENSE, THIRD_PARTY_NOTICES.md, docs/DEPENDENCIES.md -Destination $payload

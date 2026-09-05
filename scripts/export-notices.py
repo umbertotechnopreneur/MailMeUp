@@ -32,6 +32,9 @@ def main():
         if entry["type"] != "package":
             continue
         name, version = key.split("/", 1)
+        # The SDK adds this build tool during single-file publishing; it is not shipped at runtime.
+        if name == "Microsoft.NET.ILLink.Tasks":
+            continue
         folder = next((root / entry["path"] for root in roots if (root / entry["path"]).is_dir()), None)
         if folder is None:
             raise RuntimeError(f"Package not restored: {key}")
