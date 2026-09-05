@@ -2,8 +2,8 @@
 
 🟩⬜⬜⬜⬜⬜⬜⬜ **12.5% verified · 87.5% awaiting verification or later work**
 
-**📍 Current focus:** Connect the first Google test account and complete the Microsoft registration, then verify phases 2–5 with real accounts.
-**⏭️ Next action:** Complete one Google consent flow, confirm the granted read-only scopes, then validate account separation, mail search and calendar agenda with known examples. See the [restart checkpoint](../.github/tasks/resume.md).
+**📍 Current focus:** The two-account Google read-only checkpoint passes. Complete the Microsoft registration and verify provider-specific edge cases.
+**⏭️ Next action:** Check a known upcoming Google appointment, then register Microsoft and repeat the same mail/calendar flow. See the [restart checkpoint](../.github/tasks/resume.md).
 
 Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **1 of 8 phases**. Phases have equal weight; these percentages are status markers, not estimates of development time.
 
@@ -27,41 +27,41 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 ## 🟡 1. Prepare the pilot — 0% (0/3 complete)
 
-- ⚪ **1.1** Choose approved test accounts: two Google and two Microsoft accounts, covering personal and work accounts where available.
-- 🟡 **1.2** Set up the Google and Microsoft application registrations and check consent requirements for the selected testers. The Google Desktop client file has been imported locally and its secret is protected by Windows. The Google Cloud APIs, external test audience and publishing state have not been independently verified. Microsoft remains to be created.
+- 🟡 **1.1** Two approved Google test accounts are connected. Microsoft test accounts still need to be selected.
+- 🟡 **1.2** The Google Desktop client is configured locally, remains in Testing and accepts approved test users. A non-approved account was correctly denied. Publication was not attempted. Microsoft remains to be created.
 - ⚪ **1.3** Choose a few messages and appointments with known results to verify later.
 
 **Ready when:** the pilot accounts and required read permissions are available. Any work-account restrictions are understood.
 
 ## 🧪 2. Connect accounts safely — source prepared, 0% verified
 
-- 🧪 **2.1** Browser sign-in, account choice and mail/calendar scope choices compile and have local contract coverage; interactive provider checks remain.
-- 🧪 **2.2** Provider credentials and account token caches use operating-system protection. Windows round-trip and plaintext exclusion pass. macOS and Linux are outside current validation.
-- 🧪 **2.3** Multiple identity slots, reconnect and local account removal are implemented in source. Restart and expired-access behavior still need real-provider checks.
+- 🧪 **2.1** Browser sign-in and the six allowed read-only scopes pass for two Google accounts. Microsoft remains.
+- 🧪 **2.2** Google client and account tokens persist through new Windows processes using protected storage. macOS and Linux are outside current validation.
+- 🧪 **2.3** Two Google identities remain separate and usable after restart. Real reconnect, expired-access and removal checks remain.
 
 **Ready when:** several accounts remain usable after restarting, and a missing or locked credential store produces a clear error.
 
 ## 🧪 3. Read email from both providers — source prepared, 0% verified
 
-- 🧪 **3.1** Provider search is implemented in source; Gmail and Microsoft queries still need real-account comparison.
-- 🧪 **3.2** Selected messages return bounded plain text. Conversation/thread reading remains outside this first slice.
-- 🧪 **3.3** Bounded responses, continuation pages and account-level failures pass synthetic tests and await provider checks.
+- 🧪 **3.1** Real Gmail search covers both connected accounts. Microsoft comparison remains.
+- 🧪 **3.2** A real Gmail result returns bounded plain text. Conversation/thread reading remains outside this first slice.
+- 🧪 **3.3** Real Gmail compact results and continuation pass. Real provider-failure handling remains.
 
 **Ready when:** results match the known examples in Gmail and Outlook, without changing unread flags or other mailbox data.
 
 ## 🧪 4. Search across accounts — source prepared, 0% verified
 
-- 🧪 **4.1** One, several or all mail-enabled accounts can be selected in source.
-- 🧪 **4.2** Global limits, 160-character previews and short local references are implemented in source.
-- 🧪 **4.3** Results carry account identity and partial failures; synthetic aggregation tests pass and real multi-account behavior awaits checks.
+- 🧪 **4.1** A real all-account search covers two Google accounts. Microsoft and mixed-provider selection remain.
+- 🧪 **4.2** The real search respects the global limit and supports short references and a continuation cursor.
+- 🧪 **4.3** Results preserve their source account with complete two-account coverage. A real partial-failure case remains.
 
 **Ready when:** Codex can answer a cross-account request without confusing sources or presenting incomplete coverage as complete.
 
 ## 🧪 5. Add calendars and appointments — source prepared, 0% verified
 
-- 🧪 **5.1** Calendar listing and short selection references pass synthetic tests.
-- 🧪 **5.2** Combined agenda, scope-bound cursors and bounded appointment details pass synthetic tests.
-- 🧪 **5.3** Provider occurrence expansion, all-day boundaries and cancellations are handled in source; time-zone and recurrence examples still need checks.
+- 🧪 **5.1** Four real Google calendars were listed across two accounts with complete coverage.
+- 🧪 **5.2** Real all-calendar search, appointment detail and continuation pass. The primary-calendar window can return an empty agenda correctly.
+- 🧪 **5.3** Provider occurrence expansion, all-day boundaries and cancellations are handled in source; known time-zone, recurrence and cancellation examples still need comparison.
 
 **Ready when:** the agenda matches Google and Microsoft calendars for the requested dates, with no changes or invitations sent.
 

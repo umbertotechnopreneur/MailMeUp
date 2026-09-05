@@ -12,16 +12,17 @@
 - Public provider IDs are stored in `provider-settings.json`. Google client secrets and per-account tokens use protected slots; Microsoft uses a protected MSAL multi-account cache. SQLite stores non-secret account metadata and read categories.
 - Provider reads use short in-memory references, bounded text and coverage reporting. Release build, 16 tests, Windows protected storage and the seven-tool MCP smoke test pass locally.
 - The [MVP plan](../../docs/MVP_PLAN.md) and [app registration guide](../../docs/APP_REGISTRATION.md) are saved. Foundation validation recorded earlier does not validate future work.
-- The Google Cloud project `mailmeup` exists (project number `669810524015`). Its Desktop client file was imported locally on 2026-09-05 and the protected-secret status is healthy. Gmail/Calendar API, external test audience and publishing state were not independently verified. Microsoft registration remains pending. No account token was obtained.
+- The Google Cloud project `mailmeup` exists (project number `669810524015`). Its Desktop client is imported and protected. Two approved test accounts complete PKCE sign-in and real Gmail/Calendar reads; a non-approved account is denied in Testing mode. Microsoft registration remains pending.
+- The privacy-preserving Google checkpoint covered ten compact mail results, bounded message reading, mail pagination, four calendars, recent appointment search, bounded appointment reading and event pagination. The future primary-calendar window was empty and completed normally.
 - The provider setup/sign-in/read source, tests and dependency locks are committed locally. Real provider and clean Windows x64 checks remain.
 
 ## Resume here
 
-1. Confirm the Google project has Gmail and Calendar APIs enabled, remains External in Testing and lists the intended test users. Do not publish it.
-2. Connect one authorized Google test account and confirm the consent screen requests only the six documented identity, Gmail-read and Calendar-read scopes.
+1. Compare a known Google message and upcoming appointment with the provider UI, including time zone and recurrence behavior.
+2. Check Google reconnect, revoked access and local removal without changing provider data.
 3. Create the Microsoft public desktop registration for personal and work accounts and record its Application (client) ID.
-4. Connect one authorized test account at a time. Verify restart, identity separation, scope choices and local removal.
-5. Compare provider results with the known pilot messages and appointments. Keep all provider operations read-only. Google installed apps require a fresh consent flow when changing permissions.
+4. Connect one authorized Microsoft test account at a time and repeat the mail/calendar flow.
+5. Keep all provider operations read-only. Google installed apps require a fresh consent flow when changing permissions.
 
 ## Working agreement
 
