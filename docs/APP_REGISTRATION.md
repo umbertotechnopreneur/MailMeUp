@@ -1,29 +1,100 @@
-# Register MailMeUp with Google and Microsoft
+# Provider setup and first sign-in
 
-An app registration gives MailMeUp an identity at each provider. It produces a **Client ID**. Each person still signs in and chooses whether to let the app read their data.
+> [!IMPORTANT]
+> **Temporary early-build requirement.** MailMeUp does not yet provide a shared provider-registration or one-click onboarding flow. Until that changes, each user must create their own Google and/or Microsoft desktop app registration before connecting an account. We are actively working to make this simpler.
 
-## Google
+> [!WARNING]
+> **Platform limit as of 2026-09-05.** Google and Microsoft browser sign-in has been exercised on Windows x64 only. The OAuth flow and protected token storage on macOS and Linux are not yet verified and must be tested before support can be claimed.
 
-1. Open [Google Cloud Console](https://console.cloud.google.com/) and create a project named **MailMeUp**.
-2. In **APIs & Services > Library**, enable **Gmail API** and **Google Calendar API**.
-3. Open **Google Auth Platform**. Set the app name and contact email, choose **External** for personal and work accounts, and add your pilot accounts as test users. Keep the app in testing for the initial pilot.
-4. Under **Data Access**, add `openid`, `email`, `profile`, `gmail.readonly`, `calendar.calendarlist.readonly` and `calendar.events.readonly`.
-5. Under **Clients > Create client**, choose **Desktop app** and name it **MailMeUp Desktop**. Keep the Client ID and downloaded client configuration privately on your computer.
+## Why this is needed
 
-Calendar permission changes require a new consent flow for this desktop app. Do not assume Google supports automatic incremental consent for installed apps.
+Google and Microsoft do not allow a desktop program to read a mailbox just because the program is installed. OAuth is the consent process that opens the provider's sign-in page, shows the requested read-only permissions, and lets the account owner approve or decline them.
 
-## Microsoft
+A **Client ID** identifies the local MailMeUp desktop app to the provider. It is not an account password. Google gives you a downloadable desktop-client JSON file; keep that file private because it includes the app configuration. Microsoft gives you an **Application (client) ID**; a Microsoft desktop app does not need a client secret.
 
-1. Open [Microsoft Entra](https://entra.microsoft.com/) using a directory where you can register applications.
-2. Go to **Entra ID > App registrations > New registration**. Name the app **MailMeUp**.
-3. To support Outlook.com and Microsoft 365, select the account type covering **any Entra ID tenant and personal Microsoft accounts**.
-4. Add the **Mobile and desktop applications** platform with **http://localhost** as its browser callback.
-5. Add Microsoft Graph **delegated** permissions `User.Read`, `Mail.Read` and `Calendars.Read`. Record the **Application (client) ID**. This desktop application does not need a client secret.
+The two provider flows are independent. Configure and connect only the providers you plan to use. Each account signs in separately, and MailMeUp stores its tokens only in protected operating-system storage.
 
-Work directories may require administrator approval. For the first pilot, use accounts you are authorized to connect.
+## Before you begin
 
-## What comes next
+Use the full path to your local executable. In these examples, replace the path with the folder where you installed or built MailMeUp:
 
-Configure these app identities locally, then sign in to each mailbox. Tokens are created during sign-in; you do not create or paste account tokens manually. Never commit client configuration or credentials to GitHub.
+```powershell
+$MailMeUp = 'C:\Tools\MailMeUp\mailmeup.exe'
+& $MailMeUp --help
+```
 
-Sources: [Google client creation](https://developers.google.com/workspace/guides/create-credentials), [Google desktop OAuth](https://developers.google.com/identity/protocols/oauth2/native-app), [Microsoft registration](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app), [Microsoft desktop callback](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-configuration).
+The commands below use `$MailMeUp` so that you do not need to change into the executable's folder. Never paste JSON contents, tokens, refresh tokens, or client secrets into a terminal transcript, a chat, or GitHub.
+
+## Google: register the app and connect an account
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) and select or create a project for MailMeUp.
+2. In **APIs & Services > Library**, enable only **Gmail API** and **Google Calendar API**.
+3. Open **Google Auth Platform**:
+   - set the app name and contact email;
+   - choose **External** if personal or other Google accounts will sign in;
+   - keep the app in **Testing** for the pilot;
+   - add the exact Google accounts that may test the app.
+4. Under **Data Access**, add only these scopes:
+
+   ```text
+   openid
+   email
+   profile
+   https://www.googleapis.com/auth/gmail.readonly
+   https://www.googleapis.com/auth/calendar.calendarlist.readonly
+   https://www.googleapis.com/auth/calendar.events.readonly
+   ```
+
+5. Under **Clients**, create a **Desktop app** client named **MailMeUp Desktop**. Download its JSON file and keep it in a private local folder.
+6. Import that file into MailMeUp, then open the browser consent flow:
+
+   ```powershell
+   & $MailMeUp setup google 'C:\Private\client_secret.json'
+   & $MailMeUp setup status
+   & $MailMeUp accounts connect google
+   ```
+
+7. Sign in with one of the configured Google test users and approve the read-only permissions. Run the last command again for every additional Google account.
+
+Do not publish the Google OAuth app, create API keys, use service accounts, or request Gmail write/send scopes or calendar write scopes for this pilot.
+
+## Microsoft: register the app and connect an account
+
+1. Open [Microsoft Entra](https://entra.microsoft.com/) with a directory where you can register applications. Go to **Entra ID > App registrations > New registration**.
+2. Name the app **MailMeUp Desktop**.
+3. To support both Outlook.com and Microsoft 365, choose **Accounts in any organizational directory and personal Microsoft accounts**. Choose a narrower audience only when you deliberately want to limit who can sign in.
+4. In **Authentication**, add the **Mobile and desktop applications** platform with this redirect URI:
+
+   ```text
+   http://localhost
+   ```
+
+5. In **API permissions > Microsoft Graph > Delegated permissions**, retain `User.Read` and add only:
+
+   ```text
+   Mail.Read
+   Calendars.Read
+   ```
+
+6. Do not create a certificate or client secret. Do not add application permissions, `Mail.ReadWrite`, `Mail.Send`, or `Calendars.ReadWrite`. Do not grant tenant-wide admin consent unless your organization explicitly requires and approves it.
+7. On **Overview**, copy the **Application (client) ID**. Configure MailMeUp and start browser sign-in:
+
+   ```powershell
+   & $MailMeUp setup microsoft '<application-client-id>'
+   & $MailMeUp setup status
+   & $MailMeUp accounts connect microsoft
+   ```
+
+8. Choose the Microsoft account in the browser and approve the delegated read-only permissions. Run the last command again for each additional Microsoft account.
+
+Some work or school directories apply their own consent policy. Do not try to bypass that policy; ask the directory administrator if the provider blocks consent.
+
+## Check connected accounts
+
+```powershell
+& $MailMeUp accounts list
+```
+
+Use `--mail-only` or `--calendar-only` with `accounts connect` when you want to grant just one read category. Use `accounts remove <account-id>` to remove local account metadata and the protected cached credentials; revoke the provider grant separately in the Google or Microsoft account settings.
+
+MailMeUp remains read-only for this milestone: it does not send email, edit or delete messages, create or edit calendar events, or send invitations.

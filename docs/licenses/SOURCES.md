@@ -13,3 +13,7 @@ Downloaded on 2026-09-05. These are upstream legal notices, preserved as provide
 - [google-apis-LICENSE.txt](https://raw.githubusercontent.com/googleapis/google-api-dotnet-client/dd7f8ffe5a9aa3b9b07174dc03faf0f3289e7e24/LICENSE)
 - [newtonsoft-json-LICENSE.txt](https://raw.githubusercontent.com/JamesNK/Newtonsoft.Json/4e13299d4b0ec96bd4df9954ef646bd2d1b5bf2a/LICENSE.md)
 - [extensions-THIRD-PARTY-NOTICES.txt](https://raw.githubusercontent.com/dotnet/extensions/ccb356f31db9d894807c4fd0c97c2f41553d1524/THIRD-PARTY-NOTICES.TXT)
+- [serilog-LICENSE.txt](https://raw.githubusercontent.com/serilog/serilog/726e29c5b172aa8813285be1ad8cc728fd531eab/LICENSE)
+- [serilog.extensions.hosting-LICENSE.txt](https://raw.githubusercontent.com/serilog/serilog-extensions-hosting/8d44e12b795b5f52231349340ad0d86d5a25a379/LICENSE)
+- [serilog.extensions.logging-LICENSE.txt](https://raw.githubusercontent.com/serilog/serilog-extensions-logging/538cf2fd64baf760950e202a00dd426c6b76e18c/LICENSE)
+- [serilog.sinks.console-LICENSE.txt](https://raw.githubusercontent.com/serilog/serilog-sinks-console/b3cb1f042f5636161b831fa8816d70d865a5eec4/LICENSE)

@@ -10,6 +10,10 @@ Bring your email and appointments from multiple Google and Microsoft accounts in
 
 [![CI](https://github.com/umbertotechnopreneur/MailMeUp/actions/workflows/ci.yml/badge.svg)](https://github.com/umbertotechnopreneur/MailMeUp/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-71DEB7)](LICENSE)
+[![Project status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-F6C453)](docs/ROADMAP.md)
+
+> [!WARNING]
+> **MailMeUp is pre-alpha software.** It is intended for development and supervised testing. Commands, setup steps and stored local data may change before the first stable release.
 
 > **Read-only by design for the current scope.** MailMeUp will help you find and read information. It will not send email, change messages, create or edit appointments, delete anything from your accounts, or send invitations.
 
@@ -24,17 +28,26 @@ MailMeUp runs on your computer. Each user connects their own accounts. No market
 
 ## What works today
 
-**This is an early build, not a ready-to-use email or calendar integration.**
+**The current pre-alpha build is usable for supervised testing on Windows x64. It is not a stable release.**
 
-The last validated foundation exposes `get_status` and `list_accounts`. The current source adds local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Client credentials and account token caches use operating-system protection.
+> [!IMPORTANT]
+> **Provider setup is currently required.** To connect Google or Microsoft accounts, each user must currently register their own OAuth desktop application and configure its Client ID locally. Google also requires the downloaded desktop client configuration file; Microsoft requires its Application (client) ID. No provider credentials are bundled with MailMeUp. Follow the [provider setup and CLI guide](docs/APP_REGISTRATION.md). We are actively working on a simpler onboarding experience.
 
-**The new account, mail and calendar code passes local automated checks. Real provider sign-in and the pilot still remain before a tested release.**
+The current source includes local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Client credentials and account token caches use operating-system protection. Read-only flows have been exercised with two Google and two Microsoft accounts on Windows without including account content in the validation output.
+
+The latest source also adds a styled terminal CLI and Serilog diagnostics. The development executable passes local automated checks and manual real-provider reads; a distributable package has not yet been rebuilt with these CLI changes. See the [CLI reference](docs/CLI_REFERENCE.md).
+
+## AI assistant support
+
+Development currently focuses only on OpenAI's Codex. MailMeUp uses the standard Model Context Protocol (MCP) over stdio, so it may also work with other compatible clients, including Claude. Claude compatibility has not been tested.
+
+Contributors interested in Claude are welcome to help with compatibility testing, setup documentation and any necessary integration work. See [how to contribute](CONTRIBUTING.md).
 
 ## Platform status
 
 - **Windows x64:** current MVP target; the packaged executable is tested before and after ZIP extraction.
 - **Windows ARM64:** package builds, but has not been executed on ARM64 hardware.
-- **macOS and Linux:** not tested because no test machines are available. Support is not claimed for the current MVP.
+- **macOS and Linux:** not tested, including browser OAuth sign-in and protected token storage. Support is not claimed for the current MVP.
 
 ## How it fits together
 

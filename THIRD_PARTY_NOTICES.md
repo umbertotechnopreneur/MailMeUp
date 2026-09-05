@@ -10,6 +10,7 @@ Included upstream license texts under `docs/licenses/` (or `licenses/` in a port
 - Microsoft.Extensions.AI: MIT.
 - ModelContextProtocol: Apache-2.0.
 - Spectre.Console: MIT.
+- Serilog and its hosting, logging and console integrations: Apache-2.0.
 - SQLitePCLRaw: Apache-2.0; its bundled SQLite engine has separate public-domain provenance described by that upstream project.
 
 Portable packaging also copies each restored package's `.nuspec` and available license/notice files, preserving package-specific metadata and notices. Test dependencies are development-only and are not distributed with the executable. Review new dependency licenses and notices when updating packages.

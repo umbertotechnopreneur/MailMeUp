@@ -24,7 +24,7 @@ flowchart LR
 | Security | Operating-system protected credential storage |
 | Providers.Google / Providers.Microsoft | Provider app setup, sign-in and read-only mail/calendar adapters |
 | Mcp | Tool descriptions and compact results |
-| Cli | Commands, dependency injection and process lifetime |
+| Cli | Commands, Spectre.Console presentation, Serilog configuration, dependency injection and process lifetime |
 
 Calendar adapter folders are reserved inside Application and each provider.
 
@@ -32,6 +32,7 @@ Calendar adapter folders are reserved inside Application and each provider.
 
 - Current provider scope is read-only. No write tools are registered or planned for this milestone.
 - MCP stdout contains protocol messages only; diagnostics go to stderr.
+- CLI output uses a compact banner and section dividers in terminals, with JSON for pipes or `--json`. An application decorator records bounded operation diagnostics through `ILogger<T>` for both adapters; Serilog lives only in the executable. See [logging](LOGGING.md).
 - SQLite stores metadata, never credentials. An empty account list does not create a database.
 - Public provider IDs use a small local settings file. Google uses a protected token slot per account; Microsoft uses a protected MSAL multi-account cache. Protection uses DPAPI, macOS Keychain or Linux Secret Service, with no plain-text fallback.
 - Provider readiness must reflect real implementation status.

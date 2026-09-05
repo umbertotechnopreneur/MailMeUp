@@ -1,11 +1,11 @@
 🟩🟩🟩🟩🟩⬜⬜⬜ **62.5% source prepared · 37.5% remaining**
 
-🟩🟩🟩🟩🟨⬜⬜⬜ **58.3% verified · 41.7% awaiting verification or later work**
+🟩🟩🟩🟩🟩⬜⬜⬜ **62.5% verified · 37.5% awaiting verification or later work**
 
-**📍 Current focus:** Four-account Google/Microsoft reads pass. Verify known results, account recovery and installation behavior.
-**⏭️ Next action:** Compare known messages and appointments, then check reconnect, revoked access and local removal. See the [restart checkpoint](../.github/tasks/resume.md).
+**📍 Current focus:** Real examples pass across four accounts. Verify account recovery and installation behavior.
+**⏭️ Next action:** Check reconnect, revoked access, local removal and partial-provider failures. See the [restart checkpoint](../.github/tasks/resume.md).
 
-Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **14 of 24 checkpoints**. Each phase has three checkpoints; percentages are status markers, not estimates of development time.
+Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **15 of 24 checkpoints**. Each phase has three checkpoints; percentages are status markers, not estimates of development time.
 
 🟢 Complete · 🟡 In progress · ⚪ Not started · 🧪 Automated checks passed; real-provider checks pending
 
@@ -13,7 +13,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 **Goal:** use MailMeUp in Codex to find and read email and appointments across real Google and Microsoft accounts.
 
-**Read-only throughout:** no sending, editing, deleting, invitations or changes to messages and calendars. Local setup and credential storage can save data on the device.
+**Read-only throughout:** no sending, editing, deleting, invitations or changes to messages and calendars. MailMeUp cannot create, update or remove calendar events. Local setup and credential storage can save data on the device.
 
 **Verification rule:** the assistant finishes the assigned work, proposes the relevant tests, and runs them only when the owner explicitly requests them.
 
@@ -23,13 +23,13 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 - 🟢 **0.2** Solution, executable, local metadata and basic MCP connection.
 - 🟢 **0.3** Initial tests, CI and six-platform packaging checks completed.
 
-**Completed:** the foundation works. Real email and calendar code now passes local automated checks but remains unverified against providers.
+**Completed:** the foundation works. Current email and calendar reads pass local checks and privacy-preserving real-provider checks.
 
-## 🟡 1. Prepare the pilot — 67% (2/3)
+## 🟢 1. Prepare the pilot — 100% (3/3)
 
 - 🟢 **1.1** Two Google and two Microsoft test accounts are connected with separate identities.
 - 🟢 **1.2** Both desktop registrations are configured locally. Google remains in Testing; no provider app was published.
-- ⚪ **1.3** Choose a few messages and appointments with known results to verify later.
+- 🟢 **1.3** Bounded real examples were read and checked without writing identities or content to test output.
 
 **Ready when:** the pilot accounts and required read permissions are available. Any work-account restrictions are understood.
 
@@ -45,7 +45,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 - 🟢 **3.1** Real Gmail and Microsoft searches cover two accounts per provider.
 - 🟢 **3.2** Real messages from both providers return bounded plain text. Conversation/thread reading remains outside this first slice.
-- 🟡 **3.3** Compact results and continuation pass for both providers. Real provider-failure handling remains.
+- 🟡 **3.3** Compact results, bounded detail consistency and continuation pass for all four accounts. Real provider-failure handling remains.
 
 **Ready when:** results match the known examples in Gmail and Outlook, without changing unread flags or other mailbox data.
 
@@ -57,11 +57,11 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 **Ready when:** Codex can answer a cross-account request without confusing sources or presenting incomplete coverage as complete.
 
-## 🟡 5. Add calendars and appointments — 67% (2/3)
+## 🟡 5. Read calendars and appointments — 67% (2/3)
 
 - 🟢 **5.1** Seven real calendars were listed across all four accounts with complete coverage.
 - 🟢 **5.2** Mixed-provider agenda, bounded appointment detail, continuation and empty windows pass. Microsoft null optional event fields are handled.
-- 🟡 **5.3** Provider occurrence expansion, all-day boundaries and cancellations are handled in source; known time-zone, recurrence and cancellation examples still need comparison.
+- 🟡 **5.3** Real event summary/detail examples agree for three accounts; the fourth has no events in the checked window. Known time-zone, recurrence and cancellation examples still need comparison.
 
 **Ready when:** the agenda matches Google and Microsoft calendars for the requested dates, with no changes or invitations sent.
 
@@ -81,4 +81,4 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 **MVP accepted when:** testers can independently connect accounts, search email and check appointments; results are correct, failures are clear, credentials are protected and provider data remains unchanged.
 
-Public rollout comes after the pilot and any remaining provider approval requirements. Sending, calendar editing, attachments and background synchronization are outside this MVP.
+Public rollout comes after the pilot and any remaining provider approval requirements. Sending, creating or editing calendar events, attachments and background synchronization are outside this MVP.
