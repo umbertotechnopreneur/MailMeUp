@@ -18,7 +18,8 @@ if (Test-Path -LiteralPath $payload) { throw "Package directory already exists: 
 $hostOs = if ($IsWindows) { 'win' } elseif ($IsMacOS) { 'osx' } else { 'linux' }
 if (-not $Runtime.StartsWith("$hostOs-")) { throw 'Package on the target operating system to preserve archive and executable behavior.' }
 $hostArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$smokeStatus = if ($Runtime -eq "$hostOs-$hostArchitecture") { 'native' } else { 'not-run-cross-architecture' }
+$isNative = $Runtime -eq "$hostOs-$hostArchitecture"
+$smokeStatus = if ($isNative) { 'native-before-and-after-extraction' } else { 'not-run-cross-architecture' }
 
 Push-Location $repoRoot
 try {
@@ -45,7 +46,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Notice export failed.' }
 
     $executable = Join-Path $payload $(if ($IsWindows) { 'mailmeup.exe' } else { 'mailmeup' })
-    if ($smokeStatus -eq 'native') {
+    if ($isNative) {
         python scripts/smoke-test.py $executable
         if ($LASTEXITCODE -ne 0) { throw 'Published executable smoke test failed.' }
     }
@@ -60,6 +61,32 @@ try {
     } else {
         tar -czf $archive -C $payload .
         if ($LASTEXITCODE -ne 0) { throw 'Archive creation failed.' }
+    }
+    if ($isNative) {
+        $verificationRoot = Join-Path (Join-Path $artifactRoot 'verification') "$packageName-$([Guid]::NewGuid().ToString('N'))"
+        $artifactPrefix = [IO.Path]::GetFullPath($artifactRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+        $verificationPath = [IO.Path]::GetFullPath($verificationRoot)
+        if (-not $verificationPath.StartsWith($artifactPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Archive verification path escaped the artifact directory.'
+        }
+
+        try {
+            New-Item -ItemType Directory -Path $verificationPath -Force | Out-Null
+            if ($IsWindows) {
+                Expand-Archive -LiteralPath $archive -DestinationPath $verificationPath
+            } else {
+                tar -xzf $archive -C $verificationPath
+                if ($LASTEXITCODE -ne 0) { throw 'Archive extraction failed.' }
+            }
+
+            $verifiedExecutable = Join-Path $verificationPath $(if ($IsWindows) { 'mailmeup.exe' } else { 'mailmeup' })
+            python scripts/smoke-test.py $verifiedExecutable
+            if ($LASTEXITCODE -ne 0) { throw 'Extracted executable smoke test failed.' }
+        } finally {
+            if (Test-Path -LiteralPath $verificationPath) {
+                Remove-Item -LiteralPath $verificationPath -Recurse -Force
+            }
+        }
     }
     $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $(Split-Path -Leaf $archive)" | Set-Content -LiteralPath "$archive.sha256" -Encoding utf8NoBOM

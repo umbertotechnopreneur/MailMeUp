@@ -13,7 +13,7 @@ Earlier foundation checks also produced six portable packages and ran CI on Wind
 
 ## Limits
 
-The current read-only provider source has not yet been packaged or run by remote CI. Native package smoke tests run only when the runner matches the target CPU.
+The current read-only provider source has passed a native Windows x64 package smoke test. Remote CI and the other current portable packages remain pending. Native package smoke tests run only when the runner matches the target CPU.
 
 Real Google/Microsoft sign-in, OS-protected credential persistence and provider result comparison still require the app registrations and authorized pilot accounts. Provider scope remains read-only. No release was published.
 
