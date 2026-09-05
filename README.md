@@ -17,6 +17,12 @@ Bring your email and appointments from multiple Google and Microsoft accounts in
 
 > **Read-only by design for the current scope.** MailMeUp will help you find and read information. It will not send email, change messages, create or edit appointments, delete anything from your accounts, or send invitations.
 
+## Why MailMeUp?
+
+Built-in Gmail and Outlook integrations are useful when one connection is enough. The frustration begins when email is split across personal, company, client and project accounts. Multi-account availability varies by app, account, plan, workspace and client, so bringing every relevant inbox into the same request is not always a predictable experience.
+
+MailMeUp is built for that reality. Connect as many supported Google and Microsoft accounts as you choose, decide which accounts participate and search them together from one conversation. It gives professionals, and anyone managing more than one address, a modern local bridge without creating another hosted inbox.
+
 ## What it will do
 
 - Search across Gmail, Google Workspace, Outlook.com and Microsoft 365 inboxes.
@@ -35,6 +41,10 @@ MailMeUp runs on your computer. Each user connects their own accounts. No market
 > **Provider setup is currently required.** To connect Google or Microsoft accounts, each user must currently register their own OAuth desktop application and configure its Client ID locally. Google also requires the downloaded desktop client configuration file; Microsoft requires its Application (client) ID. No provider credentials are bundled with MailMeUp. Follow the [provider setup and CLI guide](docs/APP_REGISTRATION.md). We are actively working on a simpler onboarding experience.
 
 The current source includes local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Mail searches exclude Spam/Junk and Trash/Deleted Items by default. Client credentials and account token caches use operating-system protection. Read-only flows have been exercised with two Google and two Microsoft accounts on Windows without including account content in the validation output.
+
+![MailMeUp cross-account mail search in an AI conversation, with example addresses redacted](docs/assets/branding/mailmeup-chat-search.png)
+
+*Example conversation with redacted addresses. MailMeUp searches selected accounts without modifying messages.*
 
 The Windows build passed 68 automated tests and read-only checks across four real accounts. Recovery, partial results and calendar boundaries have synthetic regression coverage; clean installation and the pilot remain. See the [validation record](docs/VALIDATION.md) and [account recovery guide](docs/RECOVERY.md).
 
