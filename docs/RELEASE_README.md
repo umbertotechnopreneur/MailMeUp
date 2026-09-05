@@ -20,7 +20,7 @@ Use the Windows executable path when applicable. Codex launches and controls the
 
 `MAILMEUP_DATA_DIR` optionally selects an absolute private data directory. No tokens or real mailbox data are included. Native library extraction requires a writable local location. See BUILD_INFO.txt for version, commit and whether this archive received a native smoke test. These pre-alpha binaries are unsigned.
 
-Registration and setup guide: https://github.com/umbertotechnopreneur/MailMeUp/blob/main/docs/APP_REGISTRATION.md
+Setup guide: https://github.com/umbertotechnopreneur/MailMeUp/blob/main/docs/GETTING_STARTED.md
 
 Documentation and source: https://github.com/umbertotechnopreneur/MailMeUp
 

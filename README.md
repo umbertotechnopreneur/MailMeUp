@@ -41,6 +41,7 @@ The last validated foundation exposes `get_status` and `list_accounts`. The curr
 - [Short product overview](docs/PRODUCT.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Steps to a testable MVP](docs/MVP_PLAN.md)
+- [Getting started](docs/GETTING_STARTED.md)
 - [Calendars and appointments](docs/CALENDARS.md)
 - [Accounts and credentials](docs/AUTHENTICATION.md)
 - [Register the app with Google and Microsoft](docs/APP_REGISTRATION.md)

@@ -65,10 +65,10 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 **Ready when:** the agenda matches Google and Microsoft calendars for the requested dates, with no changes or invitations sent.
 
-## ⚪ 6. Make installation usable — 0% (0/3)
+## 🟡 6. Make installation usable — 33% (1/3)
 
-- ⚪ **6.1** Provide a short guide: download, connect accounts, register in Codex and try a sample request.
-- ⚪ **6.2** Test on a clean Windows installation, then repeat on macOS and Linux, including protected sign-in.
+- 🟢 **6.1** A short guide covers extraction, provider setup, account connection, Codex registration and sample requests.
+- 🟡 **6.2** The Windows x64 archive passes smoke tests before and after extraction; a clean-machine test and macOS/Linux runs remain.
 - ⚪ **6.3** Check updates preserve accounts and that diagnostics reveal no credentials or private content.
 
 **Ready when:** a tester can install without development tools. Claim support only for platforms and account types actually tested.
