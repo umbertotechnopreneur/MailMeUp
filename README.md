@@ -40,8 +40,10 @@ The executable starts, reports its status and exposes two discovery tools: `get_
 
 - [Short product overview](docs/PRODUCT.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Steps to a testable MVP](docs/MVP_PLAN.md)
 - [Calendars and appointments](docs/CALENDARS.md)
 - [Accounts and credentials](docs/AUTHENTICATION.md)
+- [Register the app with Google and Microsoft](docs/APP_REGISTRATION.md)
 - [Privacy](docs/PRIVACY.md)
 - [Connect to Codex](docs/CODEX_SETUP.md)
 - [Build and contribute](docs/DEVELOPMENT.md)

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add a concise MVP plan with progress indicators and a provider app registration guide.
+- Record the owner's requirement to run tests and other checks only when explicitly requested.
+- Save a restart checkpoint; no authentication code or new dependencies have been added.
+
 ## 0.1.0-alpha.1 — Foundation
 
 - Establish the .NET 10 solution and separate application, storage, security, provider, MCP and CLI modules.

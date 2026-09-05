@@ -25,7 +25,9 @@ MailMeUp is an MIT-licensed, local .NET 10 email and calendar MCP bridge. All re
 ## Validation and handoff
 
 - Use `rg` for searches and `pwsh -NoProfile` for PowerShell scripts.
-- Run `pwsh -NoProfile -File scripts/validate.ps1` after behavior changes. For documentation-only edits, run the repository preflight.
+- Do not run tests, builds, formatters, linters, smoke tests, repository preflight or other verification on your own initiative.
+- Finish the requested work first, then explain which tests or checks would be useful. Run them only when the owner explicitly asks. In Italian, use wording such as: "Ci sarebbero i test da lanciare."
+- Do not dispatch CI or push changes merely to trigger verification without an explicit request. This working agreement does not itself change the existing GitHub Actions configuration.
 - Package tests must invoke the published executable, not just `dotnet run`.
 - Keep `docs/VALIDATION.md` factual: distinguish local tests, remote CI and untested platform/credential paths.
 - Update the changelog and `.github/tasks/todo.md` when milestones change. Do not claim planned features are shipping.

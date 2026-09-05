@@ -2,6 +2,8 @@
 
 **All planned provider features are read-only.** Write actions require a separate future decision.
 
+For the practical steps and completion checks, see the [MVP delivery plan](MVP_PLAN.md).
+
 | Step | Result |
 | --- | --- |
 | 0. Foundation | Repository, brand, executable, discovery tools, tests and packaging |
