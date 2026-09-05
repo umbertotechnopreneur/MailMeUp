@@ -13,7 +13,7 @@
 - Keep provider identifiers behind short in-memory references and report partial account coverage.
 - Extend dependency notice generation to support legacy NuGet license metadata.
 
-Provider setup, account connection, mail and calendar source now pass local build, tests and MCP smoke checks. Real provider and portable-package checks remain.
+Provider setup, account connection, mail and calendar source now pass local build, tests and MCP smoke checks. Real provider and clean Windows installation checks remain. macOS and Linux are outside current validation.
 
 ## 0.1.0-alpha.1 — Foundation
 

@@ -13,7 +13,7 @@
 - Provider reads use short in-memory references, bounded text and coverage reporting. Release build, 16 tests, Windows protected storage and the seven-tool MCP smoke test pass locally.
 - The [MVP plan](../../docs/MVP_PLAN.md) and [app registration guide](../../docs/APP_REGISTRATION.md) are saved. Foundation validation recorded earlier does not validate future work.
 - The Google Cloud project `mailmeup` exists (project number `669810524015`). Gmail/Calendar API, OAuth consent and Desktop client completion still need confirmation. Microsoft registration remains pending. No account tokens or client credentials were obtained.
-- The provider setup/sign-in/read source, tests and dependency locks are uncommitted. Real provider checks and current portable packaging remain.
+- The provider setup/sign-in/read source, tests and dependency locks are committed locally. Real provider and clean Windows x64 checks remain.
 
 ## Resume here
 

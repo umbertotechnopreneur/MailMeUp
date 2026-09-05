@@ -28,7 +28,13 @@ MailMeUp runs on your computer. Each user connects their own accounts. No market
 
 The last validated foundation exposes `get_status` and `list_accounts`. The current source adds local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Client credentials and account token caches use operating-system protection.
 
-**The new account, mail and calendar code passes local automated checks. Real provider sign-in, portable packaging and the pilot still remain before a tested release.**
+**The new account, mail and calendar code passes local automated checks. Real provider sign-in and the pilot still remain before a tested release.**
+
+## Platform status
+
+- **Windows x64:** current MVP target; the packaged executable is tested before and after ZIP extraction.
+- **Windows ARM64:** package builds, but has not been executed on ARM64 hardware.
+- **macOS and Linux:** not tested because no test machines are available. Support is not claimed for the current MVP.
 
 ## How it fits together
 

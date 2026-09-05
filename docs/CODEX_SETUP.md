@@ -6,7 +6,7 @@ MailMeUp is a local MCP program. No marketplace is required.
 
 ## 1. Build or extract
 
-Developers can follow [the build guide](DEVELOPMENT.md). For portable packages, extract the matching OS/CPU archive into a stable folder.
+Developers can follow [the build guide](DEVELOPMENT.md). The current MVP target is Windows x64; extract its ZIP into a stable folder.
 
 ## 2. Register the program
 
@@ -16,7 +16,7 @@ Windows example:
 codex mcp add mailmeup -- 'C:\Tools\MailMeUp\mailmeup.exe' --stdio
 ```
 
-Linux/macOS example:
+Linux/macOS reference only — these platforms are not tested or supported by the current MVP:
 
 ```sh
 codex mcp add mailmeup -- /absolute/path/mailmeup --stdio

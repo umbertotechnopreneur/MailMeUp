@@ -14,7 +14,7 @@ Earlier foundation checks also produced six portable packages and ran CI on Wind
 
 ## Limits
 
-The current read-only provider source passes Windows x64 package smoke tests before and after ZIP extraction. Windows ARM64 publishes successfully but cannot run on the x64 host. Remote CI and current macOS/Linux packages remain pending.
+The current read-only provider source passes Windows x64 package smoke tests before and after ZIP extraction. Windows ARM64 publishes successfully but cannot run on the x64 host. macOS and Linux are not tested because no machines are available; the current MVP makes no support claim for them.
 
 Real Google/Microsoft sign-in, OS-protected credential persistence and provider result comparison still require the app registrations and authorized pilot accounts. Provider scope remains read-only. No release was published.
 

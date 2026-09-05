@@ -6,6 +6,8 @@ GitHub distributes source and executable archives. There is no hosted deployment
 
 Windows, Linux and macOS each have x64 and ARM64 targets. Windows uses ZIP; Unix uses tar.gz.
 
+Only Windows x64 is tested for the current MVP. Windows ARM64 is build-only. macOS and Linux automation is retained for future use, but those packages are untested and no support is claimed until suitable machines are available.
+
 Each package includes the application, .NET runtime, license notices, version/commit information and a SHA-256 checksum. Linux targets use glibc, not musl/Alpine.
 
 A native smoke test runs when the runner matches the target CPU. Other packages explicitly record that native execution was not tested.

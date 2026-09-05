@@ -4,11 +4,13 @@ All your inboxes. One conversation.
 
 This pre-alpha build connects multiple Google and Microsoft accounts, searches mail and shows a combined calendar agenda through an MCP stdio endpoint. Account and provider setup remains a local CLI action.
 
+Windows x64 is the current tested target. Windows ARM64 is build-only. macOS and Linux have not been tested and are not supported by the current MVP.
+
 Current scope is read-only: no sending mail, changing or deleting provider data, creating appointments or sending invitations.
 
 Run `mailmeup --help`, `mailmeup setup status` or `mailmeup accounts list` (use `mailmeup.exe` on Windows). Register the Google and Microsoft desktop apps first, then use `mailmeup accounts connect <google|microsoft>`. A new installation has no accounts.
 
-Client configuration and token caches use the operating system credential store. Linux requires a working Secret Service. A self-contained build does not require the .NET SDK, but still requires a compatible OS and its standard .NET native dependencies.
+Client configuration and token caches use the operating system credential store. A self-contained build does not require the .NET SDK, but still requires a compatible Windows version.
 
 Register the executable using an absolute path:
 

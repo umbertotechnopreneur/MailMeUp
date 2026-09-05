@@ -36,7 +36,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 ## 🧪 2. Connect accounts safely — source prepared, 0% verified
 
 - 🧪 **2.1** Browser sign-in, account choice and mail/calendar scope choices compile and have local contract coverage; interactive provider checks remain.
-- 🧪 **2.2** Provider credentials and account token caches use operating-system protection. Windows round-trip and plaintext exclusion pass; macOS and Linux remain.
+- 🧪 **2.2** Provider credentials and account token caches use operating-system protection. Windows round-trip and plaintext exclusion pass. macOS and Linux are outside current validation.
 - 🧪 **2.3** Multiple identity slots, reconnect and local account removal are implemented in source. Restart and expired-access behavior still need real-provider checks.
 
 **Ready when:** several accounts remain usable after restarting, and a missing or locked credential store produces a clear error.
@@ -68,10 +68,10 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 ## 🟡 6. Make installation usable — 33% (1/3)
 
 - 🟢 **6.1** A short guide covers extraction, provider setup, account connection, Codex registration and sample requests.
-- 🟡 **6.2** The Windows x64 archive passes smoke tests before and after extraction; a clean-machine test and macOS/Linux runs remain.
+- 🟡 **6.2** The Windows x64 archive passes smoke tests before and after extraction; a clean Windows machine remains. Windows ARM64 is build-only. macOS and Linux will not be tested without suitable machines.
 - ⚪ **6.3** Check updates preserve accounts and that diagnostics reveal no credentials or private content.
 
-**Ready when:** a tester can install without development tools. Claim support only for platforms and account types actually tested.
+**Ready when:** a Windows x64 tester can install without development tools. Support remains limited to platforms and account types actually tested.
 
 ## ⚪ 7. Run the real-world pilot — 0% (0/3)
 

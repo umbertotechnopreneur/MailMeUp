@@ -1,6 +1,6 @@
 # Getting started
 
-MailMeUp is a local, read-only MCP program. Use the archive that matches your operating system and CPU, then keep the extracted folder in a stable private location.
+MailMeUp is a local, read-only MCP program. The current tested target is Windows x64. Keep the extracted folder in a stable private location.
 
 ## 1. Register the provider apps
 
@@ -16,7 +16,7 @@ Windows example:
 .\mailmeup.exe setup status
 ```
 
-Use `./mailmeup` instead on Linux or macOS. Credentials and token caches use the operating system credential store; Linux requires a working Secret Service.
+macOS and Linux are not tested because no test machines are available, so the current MVP does not claim support for them. Windows ARM64 builds but has not been executed on ARM64 hardware.
 
 ## 3. Connect accounts
 
