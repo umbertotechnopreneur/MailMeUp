@@ -261,7 +261,7 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
 
     private static string ReadLocation(JsonElement item)
     {
-        if (!item.TryGetProperty("location", out var location))
+        if (!item.TryGetProperty("location", out var location) || location.ValueKind != JsonValueKind.Object)
         {
             return string.Empty;
         }
@@ -299,7 +299,8 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
 
     private static string? ReadMeetingLink(JsonElement item)
     {
-        if (item.TryGetProperty("onlineMeeting", out var onlineMeeting))
+        if (item.TryGetProperty("onlineMeeting", out var onlineMeeting) &&
+            onlineMeeting.ValueKind == JsonValueKind.Object)
         {
             var joinUrl = GetOptionalString(onlineMeeting, "joinUrl");
             if (!string.IsNullOrWhiteSpace(joinUrl))
