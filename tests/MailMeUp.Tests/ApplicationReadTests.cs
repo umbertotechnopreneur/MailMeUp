@@ -113,7 +113,8 @@ public sealed class ApplicationReadTests
                     IsRead: false, HasAttachments: false, Recipients: ["Team <team@example.test>"]),
                 new("wrong-recipient", "Wrong recipient", "Acme Alerts <alerts@example.test>", Instant(13), "Wrong recipient preview",
                     IsRead: false, HasAttachments: true, Recipients: ["Other <other@example.test>"])
-            ]));
+            ],
+            NextCursor: null));
         var application = CreateApplication([account], [google], []);
 
         var result = await application.SearchMailAsync(new(
