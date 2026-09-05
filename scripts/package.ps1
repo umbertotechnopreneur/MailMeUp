@@ -28,7 +28,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect Git state.' }
     if ($dirty) { throw 'Commit or move aside repository changes before packaging. Artifacts are ignored.' }
     $runtimeLocks = Join-Path $repoRoot "eng/locks/$Runtime"
-    if (-not (Test-Path -LiteralPath (Join-Path $runtimeLocks 'MailMeUp.Cli.json'))) { throw 'Missing checked-in portable dependency graph.' }
+    foreach ($module in Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src') -Directory) {
+        if (-not (Test-Path -LiteralPath (Join-Path $runtimeLocks "$($module.Name).json"))) { throw "Missing portable dependency graph for $($module.Name)." }
+    }
 
     dotnet publish src/MailMeUp.Cli/MailMeUp.Cli.csproj -c Release -r $Runtime --self-contained true `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false `
