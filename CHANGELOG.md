@@ -24,7 +24,7 @@
 - Keep provider identifiers behind short in-memory references and report partial account coverage.
 - Extend dependency notice generation to support legacy NuGet license metadata.
 
-The current Windows source passed 68 .NET tests, 24 manual-runner regression tests and 27 real-provider checks across four accounts; three event checks were skipped for unavailable samples or continuation pages. Rebuilt packaging and a clean Windows installation check remain. macOS and Linux are outside current runtime validation.
+The current Windows source passed 68 .NET tests and 24 manual-runner regressions. Both the development and published executables passed 27 real-provider checks across four accounts, with three skipped event checks per run. The package from `de1fae7` passed smoke checks before and after extraction, and an update preserved all four accounts. Clean Windows installation remains. macOS and Linux are outside current runtime validation.
 
 ## 0.1.0-alpha.1 — Foundation
 

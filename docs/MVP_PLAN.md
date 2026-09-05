@@ -1,13 +1,15 @@
 🟩🟩🟩🟩🟩⬜⬜⬜ **62.5% source prepared · 37.5% remaining**
 
-🟩🟩🟩🟩🟩⬜⬜⬜ **62.5% verified · 37.5% awaiting verification or later work**
+🟩🟩🟩🟩🟩🟨⬜⬜ **66.7% verified · 33.3% awaiting verification or later work**
 
-**📍 Current focus:** Windows packaging and update preservation after passing recovery and calendar checks.
-**⏭️ Next action:** Package the committed build and check it against the connected accounts. See the [restart checkpoint](../.github/tasks/resume.md).
+**📍 Current focus:** Clean Windows installation and preparation for the owner pilot.
+**⏭️ Next action:** Install on a clean Windows x64 machine, then compare known mail and calendar examples. See the [restart checkpoint](../.github/tasks/resume.md).
 
-Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **15 of 24 checkpoints**. Each phase has three checkpoints; percentages are status markers, not estimates of development time.
+Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **16 of 24 checkpoints**. Each phase has three checkpoints; percentages are status markers, not estimates of development time.
 
 **Latest checks:** 68 .NET tests, 24 manual-runner regressions and 27 real-provider checks passed on Windows; three event checks were skipped. Synthetic fault tests do not replace real recovery or independent result comparison.
+
+**Canonical plan:** this versioned repository file is the source of truth; external output copies are retired.
 
 🟢 Complete · 🟡 In progress · ⚪ Not started · 🧪 Automated checks passed; real-provider checks pending
 
@@ -67,11 +69,11 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 **Ready when:** the agenda matches Google and Microsoft calendars for the requested dates, with no changes or invitations sent.
 
-## 🟡 6. Make installation usable — 33% (1/3)
+## 🟡 6. Make installation usable — 67% (2/3)
 
 - 🟢 **6.1** A short guide covers extraction, provider setup, account connection, Codex registration and sample requests.
-- 🟡 **6.2** The Windows x64 archive passes smoke tests before and after extraction; a clean Windows machine remains. Windows ARM64 is build-only. macOS and Linux will not be tested without suitable machines.
-- ⚪ **6.3** Check updates preserve accounts and that diagnostics reveal no credentials or private content.
+- 🟡 **6.2** The Windows x64 archive from `de1fae7` passes smoke tests before and after extraction and live reads; a clean Windows machine remains. Windows ARM64 is build-only. macOS and Linux will not be tested without suitable machines.
+- 🟢 **6.3** Updating from `971a5b8` to `de1fae7` preserved all four accounts and their metadata on the Windows workstation. Synthetic diagnostics checks reveal no credentials or private content.
 
 **Ready when:** a Windows x64 tester can install without development tools. Support remains limited to platforms and account types actually tested.
 

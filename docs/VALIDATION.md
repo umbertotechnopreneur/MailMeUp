@@ -13,7 +13,7 @@
 
 ## Current real-provider results
 
-The development executable passed **27 checks, with 0 failures and 3 skips**, across **two Google and two Microsoft accounts**:
+Both the development executable and the published Windows x64 executable from `de1fae7` passed **27 checks, with 0 failures and 3 skips** per run, across **two Google and two Microsoft accounts**:
 
 - Four bounded mail summary/detail samples and mail continuation reads.
 - Seven calendars, mixed-provider searches and three bounded event summary/detail samples.
@@ -28,7 +28,7 @@ At the owner's request, CI also skips unit-test execution. It retains build, for
 
 ## Packaging and CI
 
-The earlier Windows x64 archive from `971a5b8` passed smoke tests before and after extraction. A package containing the current changes is the next step. A clean Windows installation remains untested.
+The Windows x64 package from `de1fae7` passed native smoke checks before and after ZIP extraction, then the real-provider checks above. Account metadata matched exactly between the previous `971a5b8` executable and this build: all four accounts were preserved and usable. Diagnostics checks used synthetic data and printed no credentials or private content. This was an update on the development workstation; a clean Windows installation remains untested.
 
 Earlier foundation CI produced six portable packages; see [the recorded run](https://github.com/umbertotechnopreneur/MailMeUp/actions/runs/33943689252). That historical run does not validate the current source. Current-turn results above are local, not remote CI results.
 
@@ -38,6 +38,6 @@ Windows ARM64 was published previously but not executed on hardware. **Real macO
 
 - Deliberate real expiry, revoked access, reconnect and lost connectivity.
 - Independent known-result comparison, including recurring/cancelled events, all-day dates and time zones.
-- Update preservation, clean Windows installation and independent pilot use.
+- Clean Windows installation and independent pilot use.
 
 Google remains External in Testing. No provider-write scopes, releases or release tags were added.
