@@ -7,6 +7,9 @@ namespace MailMeUp.Application;
 /// <summary>Coordinates account lifecycle and compact read-only operations across providers.</summary>
 public sealed class MailMeUpApplication : IMailMeUpApplication
 {
+    private const int MaximumProviderPagesPerRefill = 20;
+    private const int MaximumProviderCursorHistory = 512;
+    private static readonly TimeSpan ProviderReadTimeout = TimeSpan.FromSeconds(30);
     private readonly IAccountStore _accounts;
     private readonly IReadOnlyList<ProviderDescriptor> _providers;
     private readonly IReadOnlyDictionary<string, IProviderSetupService> _providerSetupServices;
@@ -101,6 +104,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             throw new ArgumentException("Unknown account provider. Run mailmeup setup status to list supported providers.", nameof(providerId));
         }
 
+        var existingAccounts = await _accounts.ListAsync(cancellationToken);
         var result = await connector.ConnectAsync(options, cancellationToken);
         try
         {
@@ -109,11 +113,17 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         }
         catch
         {
+            // A reconnect must not delete an existing identity's credential if saving metadata fails.
+            if (existingAccounts.Any(account => string.Equals(account.Id, result.Account.Id, StringComparison.Ordinal)))
+            {
+                throw;
+            }
+
             try
             {
                 await connector.DisconnectAsync(result.Account, CancellationToken.None);
             }
-            catch (ProviderAuthenticationException)
+            catch (Exception)
             {
                 // Preserve the metadata failure; later setup can overwrite the unreachable protected credential.
             }
@@ -201,48 +211,79 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             }
 
             if (request.AccountIds is { Count: > 0 } &&
-                !state.AccountIds.SequenceEqual(request.AccountIds.Distinct(StringComparer.Ordinal), StringComparer.Ordinal))
+                !state.AccountIds.ToHashSet(StringComparer.Ordinal).SetEquals(request.AccountIds))
             {
                 throw new ArgumentException("The mail cursor belongs to a different account scope.", nameof(request));
             }
 
-            selectedAccounts = SelectMailAccounts(allAccounts, state.AccountIds);
+            // Removed or downgraded accounts are reported below without hiding healthy cursor results.
+            selectedAccounts = allAccounts.Where(account => state.AccountIds.Contains(account.Id, StringComparer.Ordinal)).ToArray();
         }
 
         var accountsById = selectedAccounts.ToDictionary(account => account.Id, StringComparer.Ordinal);
         foreach (var accountId in state.AccountIds)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var accountState = state.Accounts[accountId];
-            if (accountState.Items.Count > 0 || accountState.Started && accountState.NextProviderCursor is null)
+            if (!accountsById.TryGetValue(accountId, out var account) || !account.MailReadEnabled)
+            {
+                accountState.Items.Clear();
+                accountState.Started = true;
+                accountState.NextProviderCursor = null;
+                accountState.Failure = "The source account is no longer available for mail reads.";
+                continue;
+            }
+
+            if (accountState.Items.Count >= request.Limit || accountState.Started && accountState.NextProviderCursor is null)
             {
                 continue;
             }
 
-            var account = accountsById[accountId];
             if (!_mailReaders.TryGetValue(account.Provider, out var reader))
             {
                 accountState.Started = true;
+                accountState.NextProviderCursor = null;
                 accountState.Failure = "Mail reading is unavailable for this provider.";
                 continue;
             }
 
             try
             {
-                var page = await reader.SearchAsync(
-                    account,
-                    providerQuery,
-                    request.Limit,
-                    accountState.Started ? accountState.NextProviderCursor : null,
-                    cancellationToken);
-                accountState.Started = true;
-                accountState.NextProviderCursor = page.NextCursor;
-                accountState.Items.AddRange(page.Items);
-                accountState.Failure = null;
+                await ReadWithDeadlineAsync(async token =>
+                {
+                    var pagesRead = 0;
+                    while (accountState.Items.Count < request.Limit &&
+                           (!accountState.Started || accountState.NextProviderCursor is not null))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (++pagesRead > MaximumProviderPagesPerRefill)
+                        {
+                            throw new ProviderPaginationException();
+                        }
+
+                        var providerCursor = accountState.Started ? accountState.NextProviderCursor : null;
+                        RegisterProviderCursor(accountState.SeenProviderCursors, providerCursor);
+                        // Graph next links keep the initial page size; shrinking it could discard returned items.
+                        accountState.ProviderPageSize = accountState.ProviderPageSize == 0
+                            ? request.Limit
+                            : accountState.ProviderPageSize;
+                        var page = await reader.SearchAsync(
+                            account, providerQuery, accountState.ProviderPageSize, providerCursor, token);
+                        var next = ValidateProviderContinuation(accountState.SeenProviderCursors, page.NextCursor);
+                        accountState.Started = true;
+                        accountState.NextProviderCursor = next;
+                        accountState.Items.AddRange(page.Items);
+                        accountState.Failure = null;
+                    }
+
+                    return true;
+                }, cancellationToken);
             }
-            catch (ProviderReadException)
+            catch (Exception exception) when (IsProviderReadFailure(exception, cancellationToken))
             {
                 accountState.Started = true;
-                accountState.Failure = "Provider read failed. Reconnect this account or try again.";
+                accountState.NextProviderCursor = null;
+                accountState.Failure = ReadFailureReason(exception);
             }
         }
 
@@ -306,7 +347,15 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             throw new InvalidOperationException("Mail reading is unavailable for the source account.");
         }
 
-        var message = await reader.ReadAsync(account, address.ProviderMessageId, cancellationToken);
+        ProviderMailMessage message;
+        try
+        {
+            message = await ReadWithDeadlineAsync(token => reader.ReadAsync(account, address.ProviderMessageId, token), cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderReadException("Provider read timed out. Try reading this message again.");
+        }
         var offset = Math.Min(request.Offset, message.PlainText.Length);
         var length = Math.Min(request.MaxCharacters, message.PlainText.Length - offset);
         var text = message.PlainText.Substring(offset, length);
@@ -334,6 +383,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         var failures = new List<AccountReadFailure>();
         foreach (var account in accounts)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!_calendarReaders.TryGetValue(account.Provider, out var reader))
             {
                 failures.Add(new AccountReadFailure(account.Id, "Calendar reading is unavailable for this provider."));
@@ -342,7 +392,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
 
             try
             {
-                foreach (var calendar in (await reader.ListCalendarsAsync(account, cancellationToken)).Take(100))
+                var providerCalendars = await ReadWithDeadlineAsync(token => reader.ListCalendarsAsync(account, token), cancellationToken);
+                foreach (var calendar in providerCalendars.Take(100))
                 {
                     var reference = _references.Put(
                         "cal_",
@@ -354,12 +405,16 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                         calendar.Primary,
                         CompactNullable(calendar.TimeZone, 100)));
                 }
+                if (providerCalendars.Count > 100)
+                {
+                    failures.Add(new AccountReadFailure(account.Id, "Only the first 100 calendars were returned for this account. Calendar coverage is incomplete."));
+                }
             }
-            catch (ProviderReadException)
+            catch (Exception exception) when (IsProviderReadFailure(exception, cancellationToken))
             {
                 failures.Add(new AccountReadFailure(
                     account.Id,
-                    "Provider read failed. Reconnect this account or try again."));
+                    ReadFailureReason(exception)));
             }
         }
 
@@ -416,44 +471,63 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         var accountsById = allAccounts.ToDictionary(account => account.Id, StringComparer.Ordinal);
         foreach (var target in state.Targets.Values)
         {
-            if (target.Events.Count > 0 || target.Started && target.NextProviderCursor is null)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!accountsById.TryGetValue(target.AccountId, out var account) || !account.CalendarReadEnabled)
             {
+                target.Events.Clear();
+                target.Started = true;
+                target.NextProviderCursor = null;
+                target.Failure = "The source account is no longer available for calendar reads.";
                 continue;
             }
 
-            if (!accountsById.TryGetValue(target.AccountId, out var account) || !account.CalendarReadEnabled)
+            if (target.Events.Count >= request.Limit || target.Started && target.NextProviderCursor is null)
             {
-                target.Started = true;
-                target.Failure = "The source account is no longer available for calendar reads.";
                 continue;
             }
 
             if (!_calendarReaders.TryGetValue(account.Provider, out var reader))
             {
                 target.Started = true;
+                target.NextProviderCursor = null;
                 target.Failure = "Calendar reading is unavailable for this provider.";
                 continue;
             }
 
             try
             {
-                var page = await reader.SearchEventsAsync(
-                    account,
-                    target.ProviderCalendarId,
-                    start,
-                    end,
-                    request.Limit,
-                    target.Started ? target.NextProviderCursor : null,
-                    cancellationToken);
-                target.Started = true;
-                target.NextProviderCursor = page.NextCursor;
-                target.Events.AddRange(page.Events);
-                target.Failure = null;
+                await ReadWithDeadlineAsync(async token =>
+                {
+                    var pagesRead = 0;
+                    while (target.Events.Count < request.Limit &&
+                           (!target.Started || target.NextProviderCursor is not null))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (++pagesRead > MaximumProviderPagesPerRefill)
+                        {
+                            throw new ProviderPaginationException();
+                        }
+
+                        var providerCursor = target.Started ? target.NextProviderCursor : null;
+                        RegisterProviderCursor(target.SeenProviderCursors, providerCursor);
+                        target.ProviderPageSize = target.ProviderPageSize == 0 ? request.Limit : target.ProviderPageSize;
+                        var page = await reader.SearchEventsAsync(
+                            account, target.ProviderCalendarId, start, end, target.ProviderPageSize, providerCursor, token);
+                        var next = ValidateProviderContinuation(target.SeenProviderCursors, page.NextCursor);
+                        target.Started = true;
+                        target.NextProviderCursor = next;
+                        target.Events.AddRange(page.Events);
+                        target.Failure = null;
+                    }
+
+                    return true;
+                }, cancellationToken);
             }
-            catch (ProviderReadException)
+            catch (Exception exception) when (IsProviderReadFailure(exception, cancellationToken))
             {
                 target.Started = true;
-                target.Failure = "Provider read failed. Reconnect this account or try again.";
+                target.NextProviderCursor = null;
+                target.Failure = ReadFailureReason(exception);
             }
         }
 
@@ -522,11 +596,19 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             throw new InvalidOperationException("Calendar reading is unavailable for the source account.");
         }
 
-        var providerEvent = await reader.ReadEventAsync(
-            account,
-            address.ProviderCalendarId,
-            address.ProviderEventId,
-            cancellationToken);
+        ProviderEvent providerEvent;
+        try
+        {
+            providerEvent = await ReadWithDeadlineAsync(token => reader.ReadEventAsync(
+                account,
+                address.ProviderCalendarId,
+                address.ProviderEventId,
+                token), cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderReadException("Provider read timed out. Try reading this appointment again.");
+        }
         var descriptionLength = Math.Min(providerEvent.Description.Length, request.MaxDescriptionCharacters);
         return new EventResult(
             request.Reference,
@@ -564,6 +646,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
 
             var selected = request.CalendarReferences.Distinct(StringComparer.Ordinal).ToArray();
             var byId = allAccounts.ToDictionary(account => account.Id, StringComparer.Ordinal);
+            var selectedCalendars = new HashSet<CalendarAddress>();
             var targetIndex = 0;
             foreach (var reference in selected)
             {
@@ -573,9 +656,16 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 }
 
                 var address = _references.Get<CalendarAddress>(reference, "cal_");
+                if (!selectedCalendars.Add(address))
+                {
+                    continue;
+                }
+
                 if (!byId.TryGetValue(address.AccountId, out var account) || !account.CalendarReadEnabled)
                 {
-                    throw new ArgumentException("A selected calendar account is unavailable.", nameof(request));
+                    failures.Add(new AccountReadFailure(address.AccountId, "The source account is no longer available for calendar reads."));
+                    targets[$"t{targetIndex++}"] = new CalendarTargetCursorState(address.AccountId, address.ProviderCalendarId, reference);
+                    continue;
                 }
 
                 targets[$"t{targetIndex++}"] = new CalendarTargetCursorState(
@@ -593,6 +683,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             var targetIndex = 0;
             foreach (var account in accounts)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!_calendarReaders.TryGetValue(account.Provider, out var reader))
                 {
                     failures.Add(new AccountReadFailure(account.Id, "Calendar reading is unavailable for this provider."));
@@ -601,7 +692,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
 
                 try
                 {
-                    var calendars = await reader.ListCalendarsAsync(account, cancellationToken);
+                    var calendars = await ReadWithDeadlineAsync(token => reader.ListCalendarsAsync(account, token), cancellationToken);
                     var calendar = calendars.FirstOrDefault(item => item.Primary) ?? calendars.FirstOrDefault();
                     if (calendar is null)
                     {
@@ -617,16 +708,73 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                         calendar.ProviderCalendarId,
                         reference);
                 }
-                catch (ProviderReadException)
+                catch (Exception exception) when (IsProviderReadFailure(exception, cancellationToken))
                 {
                     failures.Add(new AccountReadFailure(
                         account.Id,
-                        "Provider read failed. Reconnect this account or try again."));
+                        ReadFailureReason(exception)));
                 }
             }
         }
 
         return new EventCursorState(start, end, scopeKey, accountIds, targets, failures);
+    }
+
+    private static async Task<T> ReadWithDeadlineAsync<T>(Func<CancellationToken, Task<T>> read, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(ProviderReadTimeout);
+        var result = await read(deadline.Token);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
+    }
+
+    private static bool IsProviderReadFailure(Exception exception, CancellationToken cancellationToken) =>
+        !cancellationToken.IsCancellationRequested &&
+        (exception is ProviderReadException or ProviderAuthenticationException or OperationCanceledException or ProviderPaginationException);
+
+    private static string ReadFailureReason(Exception exception) => exception switch
+    {
+        OperationCanceledException => "Provider read timed out. Try this search again.",
+        ProviderPaginationException => "Provider pagination could not complete within its limits. Results are partial; try a narrower search.",
+        _ => "Provider read failed. Reconnect this account or try a new search."
+    };
+
+    private static void RegisterProviderCursor(HashSet<string> seenCursors, string? cursor)
+    {
+        if (cursor is null)
+        {
+            return;
+        }
+
+        if (cursor.Length > 8_192 || seenCursors.Count >= MaximumProviderCursorHistory ||
+            !seenCursors.Add(ProviderCursorFingerprint(cursor)))
+        {
+            throw new ProviderPaginationException();
+        }
+    }
+
+    private static string? ValidateProviderContinuation(HashSet<string> seenCursors, string? cursor)
+    {
+        if (string.IsNullOrWhiteSpace(cursor))
+        {
+            return null;
+        }
+
+        if (cursor.Length > 8_192 || seenCursors.Contains(ProviderCursorFingerprint(cursor)))
+        {
+            throw new ProviderPaginationException();
+        }
+
+        return cursor;
+    }
+
+    private static string ProviderCursorFingerprint(string cursor) =>
+        Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(cursor)));
+
+    private sealed class ProviderPaginationException : Exception
+    {
     }
 
     private static string CreateEventScopeKey(EventSearchRequest request)
@@ -765,8 +913,10 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
     private sealed class AccountMailCursorState
     {
         public bool Started { get; set; }
+        public int ProviderPageSize { get; set; }
         public string? NextProviderCursor { get; set; }
         public string? Failure { get; set; }
+        public HashSet<string> SeenProviderCursors { get; } = new(StringComparer.Ordinal);
         public List<ProviderMailSummary> Items { get; } = [];
 
         public AccountMailCursorState Copy()
@@ -774,10 +924,12 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             var clone = new AccountMailCursorState
             {
                 Started = Started,
+                ProviderPageSize = ProviderPageSize,
                 NextProviderCursor = NextProviderCursor,
                 Failure = Failure
             };
             clone.Items.AddRange(Items);
+            clone.SeenProviderCursors.UnionWith(SeenProviderCursors);
             return clone;
         }
     }
@@ -808,8 +960,10 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         public string ProviderCalendarId { get; } = providerCalendarId;
         public string CalendarReference { get; } = calendarReference;
         public bool Started { get; set; }
+        public int ProviderPageSize { get; set; }
         public string? NextProviderCursor { get; set; }
         public string? Failure { get; set; }
+        public HashSet<string> SeenProviderCursors { get; } = new(StringComparer.Ordinal);
         public List<ProviderEventSummary> Events { get; } = [];
 
         public CalendarTargetCursorState Copy()
@@ -817,10 +971,12 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             var clone = new CalendarTargetCursorState(AccountId, ProviderCalendarId, CalendarReference)
             {
                 Started = Started,
+                ProviderPageSize = ProviderPageSize,
                 NextProviderCursor = NextProviderCursor,
                 Failure = Failure
             };
             clone.Events.AddRange(Events);
+            clone.SeenProviderCursors.UnionWith(SeenProviderCursors);
             return clone;
         }
     }

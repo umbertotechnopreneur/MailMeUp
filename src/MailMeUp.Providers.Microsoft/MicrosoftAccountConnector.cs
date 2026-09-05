@@ -34,35 +34,31 @@ public sealed class MicrosoftAccountConnector(IProviderConfigurationStore config
                 secrets,
                 async application =>
                 {
-                    AuthenticationResult? result = null;
-                    try
+                    var result = await application.AcquireTokenInteractive(CreateScopes(options))
+                        .WithPrompt(Prompt.SelectAccount)
+                        .WithUseEmbeddedWebView(false)
+                        .ExecuteAsync(cancellationToken);
+                    var profile = await ReadProfileAsync(result.AccessToken, cancellationToken);
+                    var homeAccountId = result.Account?.HomeAccountId?.Identifier;
+                    if (string.IsNullOrWhiteSpace(homeAccountId))
                     {
-                        result = await application.AcquireTokenInteractive(CreateScopes(options))
-                            .WithPrompt(Prompt.SelectAccount)
-                            .WithUseEmbeddedWebView(false)
-                            .ExecuteAsync(cancellationToken);
-                        var profile = await ReadProfileAsync(result.AccessToken, cancellationToken);
-                        var homeAccountId = result.Account?.HomeAccountId?.Identifier;
-                        if (string.IsNullOrWhiteSpace(homeAccountId))
-                        {
-                            throw new ProviderAuthenticationException("Microsoft returned an incomplete account identity.");
-                        }
+                        throw new ProviderAuthenticationException("Microsoft returned an incomplete account identity.");
+                    }
 
-                        var grantedScopes = result.Scopes.ToHashSet(StringComparer.OrdinalIgnoreCase);
-                        var account = new Account(
-                            $"{AccountIdPrefix}{homeAccountId}",
-                            ProviderId,
-                            profile.DisplayName,
-                            profile.EmailAddress,
-                            options.IncludeMail && grantedScopes.Contains(MailScope),
-                            options.IncludeCalendar && grantedScopes.Contains(CalendarScope));
-                        return new AccountConnectionResult(account);
-                    }
-                    catch
+                    var grantedScopes = result.Scopes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    var account = new Account(
+                        $"{AccountIdPrefix}{homeAccountId}",
+                        ProviderId,
+                        profile.DisplayName,
+                        profile.EmailAddress,
+                        options.IncludeMail && grantedScopes.Contains(MailScope),
+                        options.IncludeCalendar && grantedScopes.Contains(CalendarScope));
+                    if (!account.MailReadEnabled && !account.CalendarReadEnabled)
                     {
-                        await TryRemoveAsync(application, result?.Account);
-                        throw;
+                        throw new ProviderAuthenticationException("Microsoft did not grant any requested mail or calendar read access. The existing local connection was preserved.");
                     }
+
+                    return new AccountConnectionResult(account);
                 },
                 cancellationToken);
         }
@@ -172,23 +168,6 @@ public sealed class MicrosoftAccountConnector(IProviderConfigurationStore config
         !string.IsNullOrWhiteSpace(property.GetString())
             ? property.GetString()
             : null;
-
-    private static async Task TryRemoveAsync(IPublicClientApplication application, IAccount? account)
-    {
-        if (account is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await application.RemoveAsync(account);
-        }
-        catch
-        {
-            // Best-effort cleanup preserves the original sign-in failure.
-        }
-    }
 
     private sealed record MicrosoftProfile(string EmailAddress, string DisplayName);
 }

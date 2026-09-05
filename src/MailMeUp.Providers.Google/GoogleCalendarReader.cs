@@ -34,9 +34,16 @@ public sealed class GoogleCalendarReader : ICalendarReader
         {
             var accessToken = await _tokens.GetAsync(account, cancellationToken);
             var calendars = new List<ProviderCalendar>();
+            var seenCursors = new HashSet<string>(StringComparer.Ordinal);
+            var pagesRead = 0;
             string? cursor = null;
             do
             {
+                if (++pagesRead > 20)
+                {
+                    throw new ProviderReadException("Google calendar discovery exceeded its page limit.");
+                }
+
                 var url = "https://www.googleapis.com/calendar/v3/users/me/calendarList" +
                           "?maxResults=250&fields=items(id%2Csummary%2Cprimary%2CtimeZone%2CaccessRole)%2CnextPageToken";
                 if (!string.IsNullOrWhiteSpace(cursor))
@@ -63,12 +70,21 @@ public sealed class GoogleCalendarReader : ICalendarReader
                             GetOptionalString(item, "summary") ?? id,
                             GetOptionalBoolean(item, "primary"),
                             GetOptionalString(item, "timeZone")));
+                        if (calendars.Count > 500)
+                        {
+                            throw new ProviderReadException("Google calendar discovery exceeded its calendar limit.");
+                        }
                     }
                 }
 
                 cursor = GetOptionalString(document.RootElement, "nextPageToken");
+                if (!string.IsNullOrWhiteSpace(cursor) &&
+                    (calendars.Count >= 500 || !seenCursors.Add(cursor)))
+                {
+                    throw new ProviderReadException("Google calendar discovery could not complete within its limits.");
+                }
             }
-            while (!string.IsNullOrWhiteSpace(cursor) && calendars.Count < 500);
+            while (!string.IsNullOrWhiteSpace(cursor));
 
             return calendars;
         }
@@ -98,7 +114,7 @@ public sealed class GoogleCalendarReader : ICalendarReader
     {
         ValidateCalendarAccount(account);
         ValidateProviderId(providerCalendarId, "calendar");
-        if (limit is < 1 or > 50 || cursor is { Length: > 4_096 })
+        if (limit is < 1 or > 50 || end <= start || cursor is { Length: > 4_096 })
         {
             throw new ArgumentException("The Google event search page is invalid.");
         }
@@ -111,7 +127,7 @@ public sealed class GoogleCalendarReader : ICalendarReader
                       "&timeMin=" + Uri.EscapeDataString(start.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)) +
                       "&timeMax=" + Uri.EscapeDataString(end.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)) +
                       "&maxResults=" + limit.ToString(CultureInfo.InvariantCulture) +
-                      "&fields=items(id%2Cstatus%2Csummary%2Clocation%2Cstart%2Cend)%2CnextPageToken";
+                      "&fields=items(id%2Cstatus%2Csummary%2Clocation%2Cstart%2Cend)%2CnextPageToken%2CtimeZone";
             if (!string.IsNullOrWhiteSpace(cursor))
             {
                 url += "&pageToken=" + Uri.EscapeDataString(cursor);
@@ -123,7 +139,7 @@ public sealed class GoogleCalendarReader : ICalendarReader
             {
                 foreach (var item in items.EnumerateArray())
                 {
-                    var parsed = ParseEventSummary(item);
+                    var parsed = ParseEventSummary(item, GetOptionalString(document.RootElement, "timeZone"));
                     if (parsed is not null)
                     {
                         events.Add(parsed);
@@ -195,13 +211,19 @@ public sealed class GoogleCalendarReader : ICalendarReader
         }
     }
 
-    private static ProviderEventSummary? ParseEventSummary(JsonElement item)
+    private static ProviderEventSummary? ParseEventSummary(JsonElement item, string? calendarTimeZone)
     {
         var id = GetOptionalString(item, "id");
-        var boundaries = ParseBoundaries(item);
+        var boundaries = ParseBoundaries(item, calendarTimeZone);
         if (string.IsNullOrWhiteSpace(id) || boundaries is null)
         {
-            return null;
+            // Deleted occurrences may contain only their ID and original start time.
+            if (string.Equals(GetOptionalString(item, "status"), "cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            throw new ProviderReadException("Google returned an appointment without a valid identity or time.");
         }
 
         return new ProviderEventSummary(
@@ -215,35 +237,77 @@ public sealed class GoogleCalendarReader : ICalendarReader
             GetOptionalString(item, "location") ?? string.Empty);
     }
 
-    private static EventBoundaries? ParseBoundaries(JsonElement item)
+    private static EventBoundaries? ParseBoundaries(JsonElement item, string? calendarTimeZone = null)
     {
-        if (!item.TryGetProperty("start", out var startElement) ||
+        if (item.ValueKind != JsonValueKind.Object ||
+            !item.TryGetProperty("start", out var startElement) ||
             !item.TryGetProperty("end", out var endElement))
         {
             return null;
         }
 
-        var startDateTime = GetOptionalString(startElement, "dateTime");
-        var endDateTime = GetOptionalString(endElement, "dateTime");
-        if (DateTimeOffset.TryParse(startDateTime, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var start) &&
-            DateTimeOffset.TryParse(endDateTime, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _))
+        if (TryParseEventTime(startElement, out var start) &&
+            TryParseEventTime(endElement, out var end) && end >= start)
         {
-            return new EventBoundaries(start, startDateTime!, endDateTime!, AllDay: false);
+            return new EventBoundaries(
+                start,
+                start.ToString("O", CultureInfo.InvariantCulture),
+                end.ToString("O", CultureInfo.InvariantCulture),
+                AllDay: false);
         }
 
         var startDate = GetOptionalString(startElement, "date");
         var endDate = GetOptionalString(endElement, "date");
         if (DateOnly.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var allDayStart) &&
-            DateOnly.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            DateOnly.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var allDayEnd) &&
+            allDayEnd > allDayStart)
         {
+            var midnight = allDayStart.ToDateTime(TimeOnly.MinValue);
+            var sortStart = string.IsNullOrWhiteSpace(calendarTimeZone)
+                ? new DateTimeOffset(midnight, TimeSpan.Zero)
+                : new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(
+                    midnight, TimeZoneInfo.FindSystemTimeZoneById(calendarTimeZone)));
             return new EventBoundaries(
-                new DateTimeOffset(allDayStart.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
+                sortStart,
                 startDate!,
                 endDate!,
                 AllDay: true);
         }
 
         return null;
+    }
+
+    private static bool TryParseEventTime(JsonElement element, out DateTimeOffset result)
+    {
+        result = default;
+        var value = GetOptionalString(element, "dateTime");
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var timeSeparator = value.IndexOf('T');
+        if (value.EndsWith('Z') || timeSeparator >= 0 && value.AsSpan(timeSeparator).IndexOfAny('+', '-') >= 0)
+        {
+            return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result);
+        }
+
+        var timeZoneId = GetOptionalString(element, "timeZone");
+        if (string.IsNullOrWhiteSpace(timeZoneId) ||
+            !DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var local))
+        {
+            return false;
+        }
+
+        local = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        if (timeZone.IsInvalidTime(local) || timeZone.IsAmbiguousTime(local))
+        {
+            return false;
+        }
+
+        result = new DateTimeOffset(local, timeZone.GetUtcOffset(local));
+        return true;
     }
 
     private static IReadOnlyList<string> ReadAttendees(JsonElement item)
@@ -274,6 +338,7 @@ public sealed class GoogleCalendarReader : ICalendarReader
         }
 
         if (!item.TryGetProperty("conferenceData", out var conference) ||
+            conference.ValueKind != JsonValueKind.Object ||
             !conference.TryGetProperty("entryPoints", out var entryPoints) ||
             entryPoints.ValueKind != JsonValueKind.Array)
         {
@@ -330,12 +395,13 @@ public sealed class GoogleCalendarReader : ICalendarReader
     }
 
     private static string? GetOptionalString(JsonElement parent, string propertyName) =>
+        parent.ValueKind == JsonValueKind.Object &&
         parent.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
             ? property.GetString()
             : null;
 
     private static bool GetOptionalBoolean(JsonElement parent, string propertyName) =>
-        parent.TryGetProperty(propertyName, out var property) &&
+        parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(propertyName, out var property) &&
         property.ValueKind is JsonValueKind.True or JsonValueKind.False &&
         property.GetBoolean();
 

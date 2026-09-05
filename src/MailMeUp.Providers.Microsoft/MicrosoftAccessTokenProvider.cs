@@ -46,7 +46,7 @@ internal sealed class MicrosoftAccessTokenProvider(IProviderConfigurationStore c
                 },
                 cancellationToken);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
@@ -54,9 +54,13 @@ internal sealed class MicrosoftAccessTokenProvider(IProviderConfigurationStore c
         {
             throw;
         }
+        catch (SecretStoreException)
+        {
+            throw new ProviderReadException("The protected Microsoft credential could not be accessed. Check local credential storage.");
+        }
         catch (Exception)
         {
-            throw new ProviderReadException("Microsoft access is unavailable. Reconnect the account.");
+            throw new ProviderReadException("Microsoft authorization is temporarily unavailable. Try again later.");
         }
     }
 }

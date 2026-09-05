@@ -34,9 +34,15 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
         {
             var accessToken = await _tokens.GetAsync(account, ["Calendars.Read"], cancellationToken);
             var calendars = new List<ProviderCalendar>();
+            var seenPages = new HashSet<string>(StringComparer.Ordinal);
             string? url = "https://graph.microsoft.com/v1.0/me/calendars?%24select=id%2Cname%2CisDefaultCalendar&%24top=100";
-            while (url is not null && calendars.Count < 500)
+            while (url is not null)
             {
+                if (seenPages.Count >= 20 || !seenPages.Add(url))
+                {
+                    throw new ProviderReadException("Microsoft calendar discovery could not complete within its page limit.");
+                }
+
                 using var document = await GetJsonAsync(url, accessToken, preferText: false, cancellationToken);
                 if (document.RootElement.TryGetProperty("value", out var values) && values.ValueKind == JsonValueKind.Array)
                 {
@@ -50,12 +56,20 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
                                 GetOptionalString(item, "name") ?? id,
                                 GetOptionalBoolean(item, "isDefaultCalendar"),
                                 TimeZone: null));
+                            if (calendars.Count > 500)
+                            {
+                                throw new ProviderReadException("Microsoft calendar discovery exceeded its calendar limit.");
+                            }
                         }
                     }
                 }
 
                 var next = GetOptionalString(document.RootElement, "@odata.nextLink");
                 url = string.IsNullOrWhiteSpace(next) ? null : ValidateNextLink(next, "/v1.0/me/calendars");
+                if (url is not null && calendars.Count >= 500)
+                {
+                    throw new ProviderReadException("Microsoft calendar discovery could not complete within its calendar limit.");
+                }
             }
 
             return calendars;
@@ -86,7 +100,7 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
     {
         ValidateCalendarAccount(account);
         ValidateProviderId(providerCalendarId, "calendar");
-        if (limit is < 1 or > 50)
+        if (limit is < 1 or > 50 || end <= start)
         {
             throw new ArgumentException("The Microsoft event search page is invalid.");
         }
@@ -144,7 +158,7 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
             var accessToken = await _tokens.GetAsync(account, ["Calendars.Read"], cancellationToken);
             var url = $"https://graph.microsoft.com/v1.0/me/calendars/{Uri.EscapeDataString(providerCalendarId)}" +
                       $"/events/{Uri.EscapeDataString(providerEventId)}" +
-                      "?%24select=id%2Csubject%2Cbody%2Cstart%2Cend%2CisAllDay%2CisCancelled%2Clocation%2Cattendees%2ConlineMeeting%2ConlineMeetingUrl";
+                      "?%24select=id%2Csubject%2Cbody%2Cstart%2Cend%2CisAllDay%2CisCancelled%2Clocation%2Cattendees%2ConlineMeeting%2ConlineMeetingUrl%2CoriginalStartTimeZone%2CoriginalEndTimeZone";
             using var document = await GetJsonAsync(url, accessToken, preferText: true, cancellationToken);
             var root = document.RootElement;
             var boundaries = ParseBoundaries(root)
@@ -192,7 +206,7 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
         $"https://graph.microsoft.com/v1.0/me/calendars/{Uri.EscapeDataString(calendarId)}/calendarView" +
         "?startDateTime=" + Uri.EscapeDataString(start.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)) +
         "&endDateTime=" + Uri.EscapeDataString(end.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)) +
-        "&%24select=id%2Csubject%2Cstart%2Cend%2CisAllDay%2CisCancelled%2Clocation" +
+        "&%24select=id%2Csubject%2Cstart%2Cend%2CisAllDay%2CisCancelled%2Clocation%2CoriginalStartTimeZone%2CoriginalEndTimeZone" +
         "&%24orderby=start%2FdateTime&%24top=" + limit.ToString(CultureInfo.InvariantCulture);
 
     private static ProviderEventSummary? ParseEventSummary(JsonElement item)
@@ -201,7 +215,7 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
         var boundaries = ParseBoundaries(item);
         if (string.IsNullOrWhiteSpace(id) || boundaries is null)
         {
-            return null;
+            throw new ProviderReadException("Microsoft returned an appointment without a valid identity or time.");
         }
 
         return new ProviderEventSummary(
@@ -217,46 +231,83 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
 
     private static EventBoundaries? ParseBoundaries(JsonElement item)
     {
-        if (!item.TryGetProperty("start", out var startElement) ||
+        if (item.ValueKind != JsonValueKind.Object ||
+            !item.TryGetProperty("start", out var startElement) ||
             !item.TryGetProperty("end", out var endElement))
         {
             return null;
         }
 
-        var startValue = GetOptionalString(startElement, "dateTime");
-        var endValue = GetOptionalString(endElement, "dateTime");
-        if (!TryParseGraphDate(startValue, out var start) || !TryParseGraphDate(endValue, out var end))
+        if (!TryParseGraphDate(startElement, out var start) ||
+            !TryParseGraphDate(endElement, out var end) || end < start)
         {
             return null;
         }
 
         var allDay = GetOptionalBoolean(item, "isAllDay");
-        return allDay
-            ? new EventBoundaries(
-                start,
-                start.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                end.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                AllDay: true)
-            : new EventBoundaries(
-                start,
-                start.ToString("O", CultureInfo.InvariantCulture),
-                end.ToString("O", CultureInfo.InvariantCulture),
-                AllDay: false);
-    }
-
-    private static bool TryParseGraphDate(string? value, out DateTimeOffset result)
-    {
-        if (DateTimeOffset.TryParse(
-                value,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out result))
+        if (allDay)
         {
-            return true;
+            // Graph returns UTC by request; recover date-only boundaries in the event's original zones.
+            var startZoneId = GetOptionalString(item, "originalStartTimeZone") ?? GetOptionalString(startElement, "timeZone");
+            var endZoneId = GetOptionalString(item, "originalEndTimeZone") ?? startZoneId;
+            if (string.IsNullOrWhiteSpace(startZoneId) || string.IsNullOrWhiteSpace(endZoneId))
+            {
+                return null;
+            }
+
+            var localStart = TimeZoneInfo.ConvertTime(start, TimeZoneInfo.FindSystemTimeZoneById(startZoneId));
+            var localEnd = TimeZoneInfo.ConvertTime(end, TimeZoneInfo.FindSystemTimeZoneById(endZoneId));
+            if (localStart.TimeOfDay != TimeSpan.Zero || localEnd.TimeOfDay != TimeSpan.Zero ||
+                localEnd.Date <= localStart.Date)
+            {
+                return null;
+            }
+
+            return new EventBoundaries(
+                start,
+                localStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                localEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                AllDay: true);
         }
 
+        return new EventBoundaries(
+            start,
+            start.ToString("O", CultureInfo.InvariantCulture),
+            end.ToString("O", CultureInfo.InvariantCulture),
+            AllDay: false);
+    }
+
+    private static bool TryParseGraphDate(JsonElement element, out DateTimeOffset result)
+    {
         result = default;
-        return false;
+        var value = GetOptionalString(element, "dateTime");
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var timeSeparator = value.IndexOf('T');
+        if (value.EndsWith('Z') || timeSeparator >= 0 && value.AsSpan(timeSeparator).IndexOfAny('+', '-') >= 0)
+        {
+            return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out result);
+        }
+
+        var timeZoneId = GetOptionalString(element, "timeZone");
+        if (string.IsNullOrWhiteSpace(timeZoneId) ||
+            !DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var local))
+        {
+            return false;
+        }
+
+        local = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        if (timeZone.IsInvalidTime(local) || timeZone.IsAmbiguousTime(local))
+        {
+            return false;
+        }
+
+        result = new DateTimeOffset(local, timeZone.GetUtcOffset(local)).ToUniversalTime();
+        return true;
     }
 
     private static string ReadLocation(JsonElement item)
@@ -278,7 +329,8 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
 
         return attendees.EnumerateArray().Select(attendee =>
         {
-            if (!attendee.TryGetProperty("emailAddress", out var emailAddress))
+            if (attendee.ValueKind != JsonValueKind.Object ||
+                !attendee.TryGetProperty("emailAddress", out var emailAddress))
             {
                 return string.Empty;
             }
@@ -318,6 +370,7 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
             !Uri.TryCreate(cursor, UriKind.Absolute, out var uri) ||
             uri.Scheme != Uri.UriSchemeHttps ||
             !string.Equals(uri.Host, "graph.microsoft.com", StringComparison.OrdinalIgnoreCase) ||
+            !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment) ||
             !uri.AbsolutePath.Contains(requiredPathPart, StringComparison.Ordinal))
         {
             throw new ProviderReadException("The Microsoft calendar continuation is invalid.");
@@ -375,12 +428,13 @@ public sealed class MicrosoftCalendarReader : ICalendarReader
     }
 
     private static string? GetOptionalString(JsonElement parent, string propertyName) =>
+        parent.ValueKind == JsonValueKind.Object &&
         parent.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
             ? property.GetString()
             : null;
 
     private static bool GetOptionalBoolean(JsonElement parent, string propertyName) =>
-        parent.TryGetProperty(propertyName, out var property) &&
+        parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(propertyName, out var property) &&
         property.ValueKind is JsonValueKind.True or JsonValueKind.False &&
         property.GetBoolean();
 

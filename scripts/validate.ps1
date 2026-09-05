@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$SkipUnitTests
+)
 
 $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_UI_LANGUAGE = 'en'
@@ -12,8 +14,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Formatting check failed.' }
     dotnet build MailMeUp.slnx -c Release --no-restore
     if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
-    dotnet test MailMeUp.slnx -c Release --no-build --logger 'trx;LogFileName=tests.trx' --results-directory TestResults
-    if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
+    if (-not $SkipUnitTests) {
+        dotnet test MailMeUp.slnx -c Release --no-build --logger 'trx;LogFileName=tests.trx' --results-directory TestResults
+        if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
+    }
     python scripts/smoke-test.py src/MailMeUp.Cli/bin/Release/net10.0/mailmeup.dll
     if ($LASTEXITCODE -ne 0) { throw 'Protocol smoke test failed.' }
     python scripts/export-notices.py --check

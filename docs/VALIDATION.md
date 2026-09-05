@@ -1,52 +1,43 @@
 # Validation
 
-Checked locally on Windows on 2026-09-05. Automated checks used synthetic `example.test` data. A real Google Desktop client file was later imported with command output suppressed; no provider account was connected.
+**Windows x64, 2026-09-05. Pre-alpha and read-only.** Local automated checks use synthetic `example.test` data and isolated storage. Authorized live reads use local protected credentials; reports contain counts and outcomes only.
 
-## Passed
+## Current local results
 
-- Locked dependency restore, formatting check and Release build with zero warnings or errors.
-- Sixteen account, storage, provider setup, protected credential, cross-account mail, calendar, pagination and readiness tests.
-- Windows protected storage round-trip, deletion and plaintext-file exclusion using a synthetic token.
-- Real CLI/MCP process checks for all seven tools, empty first-run reads, invalid references and read-only annotations.
-- Dependency inventory, local-data rules and documentation links.
-- Google Desktop client validation and import into Windows-protected storage. The source file stayed outside the repository and no credential value was printed.
+- Locked restore, formatting and Release build passed with zero warnings or errors.
+- **68 .NET tests passed:** storage, account isolation, failed reconnect, selective removal, transactional MSAL cache updates, credential locking/cancellation, partial reads, continuation limits and calendar boundaries.
+- Windows protected credential I/O and separate-process lock contention passed with synthetic data. Timeout tests cover cancellation classification; they do not wait for the actual 30-second deadline.
+- **24 manual-runner regression tests passed**, without starting MailMeUp or accessing real accounts. They cover CI refusal, 0/1-account rejection, dynamic 2/3/4-account runs, individual failures, missing consent, empty calendars, batching and sanitized output.
+- CLI/MCP process checks passed for all seven read-only tools, empty first-run reads, invalid references, JSON and private diagnostics on stderr.
+- Dependency inventory and repository data/link checks passed.
 
-## Real Google checkpoint
+## Current real-provider results
 
-Checked on Windows on 2026-09-05 without printing account identities, provider identifiers, message text, appointment details or credentials:
+The development executable passed **27 checks, with 0 failures and 3 skips**, across **two Google and two Microsoft accounts**:
 
-- Two approved Google test accounts completed installed-app OAuth with PKCE and persisted across new processes. Both report Gmail and Calendar read consent.
-- All seven MCP tools advertise read-only behavior.
-- Cross-account Gmail search completed with both accounts covered, ten compact results, one bounded detail read and a working continuation cursor.
-- Four calendars were listed across both accounts. An empty future primary-calendar window completed normally; a recent all-calendar search returned appointments, read one bounded detail and exercised its continuation cursor.
-- A third sign-in was denied by Google because the selected account was not an approved tester. The attempt was cancelled and no third account was saved.
+- Four bounded mail summary/detail samples and mail continuation reads.
+- Seven calendars, mixed-provider searches and three bounded event summary/detail samples.
+- One Microsoft account had no events in the checked window: its event detail and continuation checks were skipped. Another had no next event page, so that continuation check was skipped.
+- All four accounts remained available across new processes. No identities, provider IDs, message/event content or credentials were printed.
 
-## Real Microsoft and mixed-provider checkpoint
+These checks compare summaries with fetched details. They do **not** independently compare results with Gmail, Outlook or calendar UI screens. No real account was removed or its grant revoked to simulate faults.
 
-Checked on Windows on 2026-09-05 with the same privacy-preserving output rules:
+The manual runner is local-only: `python scripts/real-provider-check.py <path-to-mailmeup>`. It enumerates accounts, requires at least two and refuses recognized CI environments before process startup. Live checks are excluded from CI.
 
-- Two Microsoft accounts completed interactive sign-in and retained mail/calendar consent across new processes.
-- Microsoft mail search covered both accounts with ten compact results, bounded message reading and a working continuation cursor.
-- Three Microsoft calendars were listed. A recent appointment was found and read after fixing null optional `location` and `onlineMeeting` values.
-- A mixed search covered all four Google/Microsoft accounts. A mixed agenda covered seven calendars, bounded appointment detail and event continuation.
-- The focused event parser fix passed the real flow and the full 16-test validation in an isolated clean checkout.
+At the owner's request, CI also skips unit-test execution. It retains build, formatting, isolated protocol smoke and repository checks. Local `scripts/validate.ps1` runs the unit suite unless `-SkipUnitTests` is supplied.
 
-## Manual real-provider check
+## Packaging and CI
 
-Live provider checks are deliberately excluded from CI because they require local protected credentials, interactive account access and live provider data. Run `python scripts/real-provider-check.py <path-to-mailmeup>` only on an authorized workstation. The script enumerates every connected account, requires at least two, reads bounded examples when available and prints only privacy-preserving results.
+The earlier Windows x64 archive from `971a5b8` passed smoke tests before and after extraction. A package containing the current changes is the next step. A clean Windows installation remains untested.
 
-The manual runner passed against the current Windows development executable on 2026-09-05. It enumerated four accounts, read and matched one bounded mail summary/detail example plus continuation per account, listed seven calendars and matched event details for the three accounts that had events in the checked window. The remaining account returned an empty event window normally.
+Earlier foundation CI produced six portable packages; see [the recorded run](https://github.com/umbertotechnopreneur/MailMeUp/actions/runs/33943689252). That historical run does not validate the current source. Current-turn results above are local, not remote CI results.
 
-Earlier foundation checks also produced six portable packages and ran CI on Windows, Linux and macOS. The first package rehearsal is recorded in [this successful run](https://github.com/umbertotechnopreneur/MailMeUp/actions/runs/33943689252).
+Windows ARM64 was published previously but not executed on hardware. **Real macOS and Linux flows are not tested:** no machines are available, and the current MVP makes no support claim for them.
 
-## Limits
+## Still to check
 
-The current read-only provider source passes Windows x64 package smoke tests before and after ZIP extraction. Windows ARM64 publishes successfully but cannot run on the x64 host. macOS and Linux are not tested because no machines are available; the current MVP makes no support claim for them.
+- Deliberate real expiry, revoked access, reconnect and lost connectivity.
+- Independent known-result comparison, including recurring/cancelled events, all-day dates and time zones.
+- Update preservation, clean Windows installation and independent pilot use.
 
-Known-result comparison, reconnect, revoked access, local removal and a real partial-provider failure remain. Provider scope remains read-only. No release was published.
-
-## Current source changes
-
-Provider setup, account removal, cross-account aggregation and read-only mail/calendar MCP contracts pass local automated checks. Real read flows now pass for two Google and two Microsoft accounts, including mixed-provider search and agenda.
-
-The Spectre.Console presentation, command options, cancellation and Serilog integration pass the local Release build with no warnings, all 16 tests, the CLI/MCP regression script, dependency inventory and repository preflight. The development executable also passes the manual real-provider runner. A distributable package has not been rebuilt for these CLI changes, and visual terminal review remains.
+Google remains External in Testing. No provider-write scopes, releases or release tags were added.

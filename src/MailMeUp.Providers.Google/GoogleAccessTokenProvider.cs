@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
 using MailMeUp.Core;
 using MailMeUp.Security;
 
@@ -13,7 +13,6 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
     private const string MailScope = "https://www.googleapis.com/auth/gmail.readonly";
     private const string CalendarListScope = "https://www.googleapis.com/auth/calendar.calendarlist.readonly";
     private const string CalendarEventsScope = "https://www.googleapis.com/auth/calendar.events.readonly";
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.Ordinal);
 
     public async Task<string> GetAsync(Account account, CancellationToken cancellationToken)
     {
@@ -29,14 +28,13 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
             throw new ProviderReadException("The protected Google client credential is missing.");
         }
 
-        var gate = Gates.GetOrAdd(account.Id, static _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(cancellationToken);
         byte[]? secretBytes = null;
         try
         {
+            using var session = await GoogleCredentialSession.AcquireAsync(secrets, account.Id, cancellationToken);
             secretBytes = await secrets.ReadAsync(configuration.ClientSecretReference, cancellationToken)
                 ?? throw new ProviderReadException("The protected Google client credential is missing.");
-            var tokenStore = new ProtectedGoogleTokenStore(secrets, account.Id);
+            var tokenStore = new ProtectedGoogleTokenStore(secrets, account.Id, cancellationToken);
             using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
                 ClientSecrets = new ClientSecrets
@@ -55,7 +53,7 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
                 ? throw new ProviderReadException("Google access expired. Reconnect the account.")
                 : accessToken;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
@@ -63,9 +61,18 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
         {
             throw;
         }
+        catch (TokenResponseException exception) when (
+            string.Equals(exception.Error?.Error, "invalid_grant", StringComparison.Ordinal))
+        {
+            throw new ProviderReadException("Google authorization expired or was revoked. Reconnect the account.");
+        }
+        catch (SecretStoreException)
+        {
+            throw new ProviderReadException("The protected Google credential could not be accessed. Check local credential storage.");
+        }
         catch (Exception)
         {
-            throw new ProviderReadException("Google access expired or is unavailable. Reconnect the account.");
+            throw new ProviderReadException("Google authorization is temporarily unavailable. Try again later.");
         }
         finally
         {
@@ -73,8 +80,6 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
             {
                 CryptographicOperations.ZeroMemory(secretBytes);
             }
-
-            gate.Release();
         }
     }
 

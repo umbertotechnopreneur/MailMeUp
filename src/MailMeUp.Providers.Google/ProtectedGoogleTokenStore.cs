@@ -6,7 +6,10 @@ using MailMeUp.Security;
 
 namespace MailMeUp.Providers.Google;
 
-internal sealed class ProtectedGoogleTokenStore(ISecretStore secrets, string slot) : IDataStore
+internal sealed class ProtectedGoogleTokenStore(
+    ISecretStore secrets,
+    string slot,
+    CancellationToken cancellationToken = default) : IDataStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly string _slot = ValidateSlot(slot);
@@ -23,7 +26,7 @@ internal sealed class ProtectedGoogleTokenStore(ISecretStore secrets, string slo
         var bytes = JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions);
         try
         {
-            await secrets.WriteAsync(_reference, bytes);
+            await secrets.WriteAsync(_reference, bytes, cancellationToken);
         }
         finally
         {
@@ -34,13 +37,13 @@ internal sealed class ProtectedGoogleTokenStore(ISecretStore secrets, string slo
     public async Task DeleteAsync<T>(string key)
     {
         ValidateOperation<T>(key);
-        await secrets.DeleteAsync(_reference);
+        await secrets.DeleteAsync(_reference, cancellationToken);
     }
 
     public async Task<T> GetAsync<T>(string key)
     {
         ValidateOperation<T>(key);
-        var bytes = await secrets.ReadAsync(_reference);
+        var bytes = await secrets.ReadAsync(_reference, cancellationToken);
         if (bytes is null)
         {
             return default!;
@@ -61,9 +64,12 @@ internal sealed class ProtectedGoogleTokenStore(ISecretStore secrets, string slo
         }
     }
 
-    public Task ClearAsync() => secrets.DeleteAsync(_reference).AsTask();
+    public Task ClearAsync() => ClearAsync(cancellationToken);
 
-    private static string CreateReference(string slot) => $"providers/google/token-cache/{ValidateSlot(slot)}";
+    internal Task ClearAsync(CancellationToken cleanupCancellationToken) =>
+        secrets.DeleteAsync(_reference, cleanupCancellationToken).AsTask();
+
+    internal static string CreateReference(string slot) => $"providers/google/token-cache/{ValidateSlot(slot)}";
 
     private static string ValidateSlot(string slot)
     {

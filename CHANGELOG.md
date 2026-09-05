@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Preserve existing credentials after failed reconnect validation or metadata persistence, and coordinate credential sessions across processes.
+- Bound provider reads and continuation work; report timeouts, removed accounts and incomplete calendar discovery as partial coverage.
+- Handle calendar null fields and all-day/time-zone boundaries without silently guessing missing event times.
+- Harden the manual provider runner with CI refusal, per-account outcomes and bounded calendar batches.
+- Add synthetic recovery, credential-session, calendar boundary and pagination regressions, plus isolated tests for the manual provider runner.
+- Keep unit-test execution local on request; CI retains build, isolated protocol smoke and repository checks without live accounts.
 - Add a Spectre.Console CLI with a compact linked banner, emoji section dividers, readable results, next steps and sign-in activity feedback, without cards or panels.
 - Preserve redirected JSON and add explicit `--json`, `--no-color`, `--no-animation`, configurable log levels and Ctrl+C cancellation.
 - Route bounded application diagnostics through `ILogger<T>` and Serilog to stderr for both CLI and MCP.
@@ -18,7 +24,7 @@
 - Keep provider identifiers behind short in-memory references and report partial account coverage.
 - Extend dependency notice generation to support legacy NuGet license metadata.
 
-Provider setup, account connection, mail, calendar, the CLI and Serilog diagnostics pass the local build, tests and MCP smoke checks. Manual real-provider checks pass across four accounts. Rebuilt packaging and a clean Windows installation check remain. macOS and Linux are outside current validation.
+The current Windows source passed 68 .NET tests, 24 manual-runner regression tests and 27 real-provider checks across four accounts; three event checks were skipped for unavailable samples or continuation pages. Rebuilt packaging and a clean Windows installation check remain. macOS and Linux are outside current runtime validation.
 
 ## 0.1.0-alpha.1 — Foundation
 

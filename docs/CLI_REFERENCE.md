@@ -50,4 +50,4 @@ Provider setup does not sign in an account. Complete it before `accounts connect
 
 The Google source file is not deleted automatically. Keep it private and remove it when no longer needed.
 
-The presentation, options and logging changes are implemented in source but have not been built or tested. See [validation](VALIDATION.md).
+The CLI and recovery changes passed local Windows checks. Real revocation, reconnect and clean installation remain. See [account recovery](RECOVERY.md) and [validation](VALIDATION.md).

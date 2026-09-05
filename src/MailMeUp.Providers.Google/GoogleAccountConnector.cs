@@ -39,7 +39,7 @@ public sealed class GoogleAccountConnector(IProviderConfigurationStore configura
         var clientSecretBytes = await secrets.ReadAsync(configuration.ClientSecretReference, cancellationToken)
             ?? throw new ProviderAuthenticationException("The protected Google client credential is missing.");
         var temporarySlot = $"pending-{Guid.NewGuid():N}";
-        var temporaryStore = new ProtectedGoogleTokenStore(secrets, temporarySlot);
+        var temporaryStore = new ProtectedGoogleTokenStore(secrets, temporarySlot, cancellationToken);
         try
         {
             var clientSecret = Encoding.UTF8.GetString(clientSecretBytes);
@@ -61,12 +61,13 @@ public sealed class GoogleAccountConnector(IProviderConfigurationStore configura
                 usePkce: true,
                 taskCancellationToken: cancellationToken,
                 dataStore: temporaryStore);
+            if (string.IsNullOrWhiteSpace(credential.Token.RefreshToken))
+            {
+                throw new ProviderAuthenticationException("Google did not grant offline access. Connect the account again and approve the requested access.");
+            }
+
             var profile = await ReadProfileAsync(credential.Token, cancellationToken);
             var accountId = $"google:{profile.Subject}";
-            var stableStore = new ProtectedGoogleTokenStore(secrets, accountId);
-            await stableStore.StoreAsync(accountId, credential.Token);
-            await TryClearAsync(temporaryStore);
-
             var grantedScopes = ParseScopes(credential.Token.Scope);
             var account = new Account(
                 accountId,
@@ -75,6 +76,18 @@ public sealed class GoogleAccountConnector(IProviderConfigurationStore configura
                 profile.EmailAddress,
                 options.IncludeMail && IsGranted(grantedScopes, MailScope),
                 options.IncludeCalendar && IsGranted(grantedScopes, CalendarListScope) && IsGranted(grantedScopes, CalendarEventsScope));
+            if (!account.MailReadEnabled && !account.CalendarReadEnabled)
+            {
+                throw new ProviderAuthenticationException("Google did not grant any requested mail or calendar read access. The existing local connection was preserved.");
+            }
+
+            var stableStore = new ProtectedGoogleTokenStore(secrets, accountId, cancellationToken);
+            using (await GoogleCredentialSession.AcquireAsync(secrets, accountId, cancellationToken))
+            {
+                await stableStore.StoreAsync(accountId, credential.Token);
+            }
+
+            await TryClearAsync(temporaryStore);
             return new AccountConnectionResult(account);
         }
         catch (OperationCanceledException)
@@ -110,7 +123,9 @@ public sealed class GoogleAccountConnector(IProviderConfigurationStore configura
 
         try
         {
-            await new ProtectedGoogleTokenStore(secrets, account.Id).DeleteAsync<TokenResponse>(account.Id);
+            // Refresh uses the same cross-process lease and cannot restore a token after local removal.
+            using var session = await GoogleCredentialSession.AcquireAsync(secrets, account.Id, cancellationToken);
+            await new ProtectedGoogleTokenStore(secrets, account.Id, cancellationToken).DeleteAsync<TokenResponse>(account.Id);
         }
         catch (OperationCanceledException)
         {
@@ -189,7 +204,8 @@ public sealed class GoogleAccountConnector(IProviderConfigurationStore configura
     {
         try
         {
-            await store.ClearAsync();
+            // Cleanup must still run after sign-in cancellation; protected-store lock waits are bounded.
+            await store.ClearAsync(CancellationToken.None);
         }
         catch (Exception exception) when (exception is SecretStoreException or ArgumentException)
         {

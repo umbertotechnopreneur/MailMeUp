@@ -37,6 +37,10 @@ Search first, read details second. Omit raw HTML, MIME, binary attachments and u
 
 References and cursors expire after about 30 minutes or a server restart. Results return coverage and individual account failures; partial coverage is never presented as complete.
 
+Each provider operation has a 30-second cancellation budget. A timeout, removed source account or failed continuation returns partial coverage alongside healthy results. Failed sources require a fresh search to retry. Caller cancellation still cancels the whole request.
+
+Calendar discovery returns at most 100 calendars per account and reports incomplete coverage when more calendars exist. Event searches accept at most 20 calendar references at a time.
+
 ## Developer requirements
 
 Provider-specific filters need separate translations. Cursors bind to query and scope. References bind messages/events to their source account.

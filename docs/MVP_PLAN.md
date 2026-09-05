@@ -2,10 +2,12 @@
 
 🟩🟩🟩🟩🟩⬜⬜⬜ **62.5% verified · 37.5% awaiting verification or later work**
 
-**📍 Current focus:** Real examples pass across four accounts. Verify account recovery and installation behavior.
-**⏭️ Next action:** Check reconnect, revoked access, local removal and partial-provider failures. See the [restart checkpoint](../.github/tasks/resume.md).
+**📍 Current focus:** Windows packaging and update preservation after passing recovery and calendar checks.
+**⏭️ Next action:** Package the committed build and check it against the connected accounts. See the [restart checkpoint](../.github/tasks/resume.md).
 
 Source readiness: **5 of 8 phases have their planned code**, including the foundation. Verified progress: **15 of 24 checkpoints**. Each phase has three checkpoints; percentages are status markers, not estimates of development time.
+
+**Latest checks:** 68 .NET tests, 24 manual-runner regressions and 27 real-provider checks passed on Windows; three event checks were skipped. Synthetic fault tests do not replace real recovery or independent result comparison.
 
 🟢 Complete · 🟡 In progress · ⚪ Not started · 🧪 Automated checks passed; real-provider checks pending
 
@@ -23,13 +25,13 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 - 🟢 **0.2** Solution, executable, local metadata and basic MCP connection.
 - 🟢 **0.3** Initial tests, CI and six-platform packaging checks completed.
 
-**Completed:** the foundation works. Current email and calendar reads pass local checks and privacy-preserving real-provider checks.
+**Completed:** the foundation works. The earlier Windows build passed local checks and privacy-preserving real-provider reads.
 
 ## 🟢 1. Prepare the pilot — 100% (3/3)
 
 - 🟢 **1.1** Two Google and two Microsoft test accounts are connected with separate identities.
 - 🟢 **1.2** Both desktop registrations are configured locally. Google remains in Testing; no provider app was published.
-- 🟢 **1.3** Bounded real examples were read and checked without writing identities or content to test output.
+- 🟢 **1.3** Bounded real examples passed summary/detail consistency checks without writing identities or content to test output. Independent comparison with the provider UI remains.
 
 **Ready when:** the pilot accounts and required read permissions are available. Any work-account restrictions are understood.
 
@@ -37,7 +39,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 - 🟢 **2.1** Browser sign-in and read-only mail/calendar consent pass for two Google and two Microsoft accounts.
 - 🟢 **2.2** All four account tokens persist through new Windows processes using protected storage. macOS and Linux are outside current validation.
-- 🟡 **2.3** Multiple identities remain separate and usable after restart. Real reconnect, expired-access and removal checks remain.
+- 🧪 **2.3** Failed reconnect preservation, credential sessions and selective local removal passed synthetic tests. Real expiry, revoked access and reconnect remain.
 
 **Ready when:** several accounts remain usable after restarting, and a missing or locked credential store produces a clear error.
 
@@ -45,7 +47,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 - 🟢 **3.1** Real Gmail and Microsoft searches cover two accounts per provider.
 - 🟢 **3.2** Real messages from both providers return bounded plain text. Conversation/thread reading remains outside this first slice.
-- 🟡 **3.3** Compact results, bounded detail consistency and continuation pass for all four accounts. Real provider-failure handling remains.
+- 🧪 **3.3** Compact results and bounded details passed for four real accounts; continuation failure handling passed synthetic tests. Independent comparison with known provider results remains.
 
 **Ready when:** results match the known examples in Gmail and Outlook, without changing unread flags or other mailbox data.
 
@@ -53,7 +55,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 - 🟢 **4.1** A real mixed search completes across all four Google and Microsoft accounts.
 - 🟢 **4.2** Real searches respect global limits and support short references and continuation cursors.
-- 🟡 **4.3** Results preserve their source account with complete four-account coverage. A real partial-failure case remains.
+- 🧪 **4.3** Partial failures, removed accounts, short/empty pages and continuation limits passed synthetic checks. The runner reports accounts separately and refuses CI. A deliberate real connectivity failure remains.
 
 **Ready when:** Codex can answer a cross-account request without confusing sources or presenting incomplete coverage as complete.
 
@@ -61,7 +63,7 @@ Source readiness: **5 of 8 phases have their planned code**, including the found
 
 - 🟢 **5.1** Seven real calendars were listed across all four accounts with complete coverage.
 - 🟢 **5.2** Mixed-provider agenda, bounded appointment detail, continuation and empty windows pass. Microsoft null optional event fields are handled.
-- 🟡 **5.3** Real event summary/detail examples agree for three accounts; the fourth has no events in the checked window. Known time-zone, recurrence and cancellation examples still need comparison.
+- 🧪 **5.3** Summary/detail checks passed for three accounts, with an empty fourth. Date/time-zone, null-field and pagination regressions passed synthetic tests; real recurrence and cancellation examples still need comparison.
 
 **Ready when:** the agenda matches Google and Microsoft calendars for the requested dates, with no changes or invitations sent.
 

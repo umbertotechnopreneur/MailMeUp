@@ -35,7 +35,7 @@ Dispatch never publishes a release. A tag must match the project version and poi
 
 ## Current limits
 
-The foundation is read-only and cannot access real accounts yet. Binaries are unsigned; Authenticode, Apple notarization and attestations are not configured. Checksums detect changes but are not publisher signatures.
+The current pre-alpha reads real accounts after local provider setup and sign-in. Binaries are unsigned; Authenticode, Apple notarization and attestations are not configured. Checksums detect changes but are not publisher signatures.
 
 No provider credentials belong in builds or release artifacts.
 

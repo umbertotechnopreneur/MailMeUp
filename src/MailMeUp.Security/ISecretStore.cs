@@ -3,6 +3,11 @@ namespace MailMeUp.Security;
 /// <summary>OS-protected credential persistence boundary.</summary>
 public interface ISecretStore
 {
+    /// <summary>Exclusively leases a credential reference across processes until disposal; fails if unsupported.</summary>
+    /// <remarks>Hold this non-reentrant lease across a complete read, refresh and write sequence. Individual reads and writes use separate locks.</remarks>
+    ValueTask<IDisposable> AcquireSessionAsync(string reference, CancellationToken cancellationToken = default) =>
+        throw new SecretStoreException("This credential store does not support protected cross-process sessions.");
+
     /// <summary>Reads a protected credential blob by its opaque reference; returns null when absent.</summary>
     ValueTask<byte[]?> ReadAsync(string reference, CancellationToken cancellationToken = default);
 

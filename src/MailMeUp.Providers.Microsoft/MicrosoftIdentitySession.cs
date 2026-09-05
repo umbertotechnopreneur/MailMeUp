@@ -7,7 +7,6 @@ namespace MailMeUp.Providers.Microsoft;
 internal static class MicrosoftIdentitySession
 {
     private const string TokenCacheReference = "providers/microsoft/token-cache";
-    private static readonly SemaphoreSlim Gate = new(1, 1);
 
     public static async Task<T> RunAsync<T>(
         string clientId,
@@ -15,64 +14,75 @@ internal static class MicrosoftIdentitySession
         Func<IPublicClientApplication, Task<T>> operation,
         CancellationToken cancellationToken)
     {
-        await Gate.WaitAsync(cancellationToken);
+        using var session = await secrets.AcquireSessionAsync(TokenCacheReference, cancellationToken);
+        byte[]? cachedBytes = null;
+        byte[]? updatedBytes = null;
         try
         {
             var application = PublicClientApplicationBuilder.Create(clientId)
                 .WithAuthority(AzureCloudInstance.AzurePublic, AadAuthorityAudience.AzureAdAndPersonalMicrosoftAccount)
                 .WithRedirectUri("http://localhost")
                 .Build();
-            AttachProtectedCache(application.UserTokenCache, secrets);
-            return await operation(application);
-        }
-        finally
-        {
-            Gate.Release();
-        }
-    }
-
-    private static void AttachProtectedCache(ITokenCache tokenCache, ISecretStore secrets)
-    {
-        tokenCache.SetBeforeAccessAsync(async notification =>
-        {
-            var bytes = await secrets.ReadAsync(TokenCacheReference);
-            if (bytes is null)
+            cachedBytes = await secrets.ReadAsync(TokenCacheReference, cancellationToken);
+            var cacheLoaded = false;
+            application.UserTokenCache.SetBeforeAccessAsync(notification =>
             {
-                return;
-            }
-
-            try
-            {
-                notification.TokenCache.DeserializeMsalV3(bytes, shouldClearExistingCache: true);
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(bytes);
-            }
-        });
-        tokenCache.SetAfterAccessAsync(async notification =>
-        {
-            if (!notification.HasStateChanged)
-            {
-                return;
-            }
-
-            var bytes = notification.TokenCache.SerializeMsalV3();
-            try
-            {
-                if (bytes.Length == 0)
+                if (!cacheLoaded)
                 {
-                    await secrets.DeleteAsync(TokenCacheReference);
+                    if (cachedBytes is not null)
+                    {
+                        notification.TokenCache.DeserializeMsalV3(cachedBytes, shouldClearExistingCache: true);
+                    }
+
+                    cacheLoaded = true;
+                }
+
+                return Task.CompletedTask;
+            });
+            application.UserTokenCache.SetAfterAccessAsync(notification =>
+            {
+                if (notification.HasStateChanged)
+                {
+                    if (updatedBytes is not null)
+                    {
+                        CryptographicOperations.ZeroMemory(updatedBytes);
+                    }
+
+                    updatedBytes = notification.TokenCache.SerializeMsalV3();
+                }
+
+                return Task.CompletedTask;
+            });
+
+            // Interactive sign-in can change the cache before account identity is validated.
+            // Persist only a successful operation so a failed reconnect preserves existing accounts.
+            var result = await operation(application);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (updatedBytes is not null)
+            {
+                if (updatedBytes.Length == 0)
+                {
+                    await secrets.DeleteAsync(TokenCacheReference, cancellationToken);
                 }
                 else
                 {
-                    await secrets.WriteAsync(TokenCacheReference, bytes);
+                    await secrets.WriteAsync(TokenCacheReference, updatedBytes, cancellationToken);
                 }
             }
-            finally
+
+            return result;
+        }
+        finally
+        {
+            if (cachedBytes is not null)
             {
-                CryptographicOperations.ZeroMemory(bytes);
+                CryptographicOperations.ZeroMemory(cachedBytes);
             }
-        });
+
+            if (updatedBytes is not null)
+            {
+                CryptographicOperations.ZeroMemory(updatedBytes);
+            }
+        }
     }
 }

@@ -15,6 +15,6 @@ For the practical steps and completion checks, see the [MVP delivery plan](MVP_P
 
 Each step needs working tests before it is advertised as available.
 
-Read-only account setup, mail search and calendar agenda pass local automated checks. The next milestone is real-provider comparison, followed by clean-install packaging and a small pilot.
+The current Windows build passed real reads across four accounts and synthetic recovery, partial-failure and calendar boundary tests. Next: clean installation, deliberate real recovery scenarios and a small pilot.
 
 No marketplace, web dashboard or hosted service is planned.

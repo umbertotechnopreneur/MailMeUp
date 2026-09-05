@@ -1,6 +1,6 @@
 # Accounts and credentials
 
-Provider app setup, interactive multi-account sign-in and protected token caches are present in the current source. Local automated checks pass; real sign-in still needs the provider registrations.
+Provider setup, multi-account sign-in and protected caches passed Windows checks with real accounts. Failed reconnect and credential session coordination passed synthetic tests; deliberate real revocation and reconnect remain.
 
 Each user signs in through Google or Microsoft in their browser. Each account is authorized separately. MailMeUp does not need your account password.
 
@@ -29,6 +29,8 @@ These commands configure the provider applications. Connect an account afterward
 - add `--mail-only` or `--calendar-only` to request one data category
 
 Run the command again to add another account. Sign-in uses the system browser and a fresh account choice. Google tokens use a protected slot per account; Microsoft accounts share MSAL's protected multi-account cache without sharing identities.
+
+Choose the same account to reconnect it. The latest source preserves existing credentials when sign-in validation fails and coordinates refresh and local removal across CLI/MCP processes. See [account recovery](RECOVERY.md).
 
 `mailmeup accounts remove <account-id>` removes local metadata and cached credentials. It does not revoke the grant at Google or Microsoft.
 

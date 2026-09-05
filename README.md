@@ -35,7 +35,7 @@ MailMeUp runs on your computer. Each user connects their own accounts. No market
 
 The current source includes local provider setup, interactive multi-account sign-in, compact cross-account mail search and a combined calendar agenda. Client credentials and account token caches use operating-system protection. Read-only flows have been exercised with two Google and two Microsoft accounts on Windows without including account content in the validation output.
 
-The latest source also adds a styled terminal CLI and Serilog diagnostics. The development executable passes local automated checks and manual real-provider reads; a distributable package has not yet been rebuilt with these CLI changes. See the [CLI reference](docs/CLI_REFERENCE.md).
+The Windows build passed 68 automated tests and read-only checks across four real accounts. Recovery, partial results and calendar boundaries have synthetic regression coverage; clean installation and the pilot remain. See the [validation record](docs/VALIDATION.md) and [account recovery guide](docs/RECOVERY.md).
 
 ## AI assistant support
 
