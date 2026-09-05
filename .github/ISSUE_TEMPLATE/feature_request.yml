@@ -1,0 +1,13 @@
+name: Feature request
+description: Propose a focused MailMeUp capability.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What task should MailMeUp help with?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior and account scope

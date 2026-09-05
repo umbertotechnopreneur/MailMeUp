@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MailMeUp.Application/MailMeUp.Application.csproj" />
+    <Project Path="src/MailMeUp.Cli/MailMeUp.Cli.csproj" />
+    <Project Path="src/MailMeUp.Core/MailMeUp.Core.csproj" />
+    <Project Path="src/MailMeUp.Mcp/MailMeUp.Mcp.csproj" />
+    <Project Path="src/MailMeUp.Providers.Google/MailMeUp.Providers.Google.csproj" />
+    <Project Path="src/MailMeUp.Providers.Microsoft/MailMeUp.Providers.Microsoft.csproj" />
+    <Project Path="src/MailMeUp.Security/MailMeUp.Security.csproj" />
+    <Project Path="src/MailMeUp.Storage/MailMeUp.Storage.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MailMeUp.Tests/MailMeUp.Tests.csproj" />
+  </Folder>
+</Solution>
