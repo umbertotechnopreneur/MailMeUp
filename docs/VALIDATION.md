@@ -2,16 +2,18 @@
 
 ## Windows onboarding changes
 
-**Windows x64, 2026-09-06 — package 0.1.1.3.** The owner authorized builds, tests and local installation after adding About & Support and the generated banner.
+**Windows x64, 2026-09-06 — package 0.1.1.4.** The owner reported that the installed `0.1.1.3` setup window terminated immediately when its existing account registry was opened. Windows Error Reporting recorded `0xC000027B` in `Microsoft.UI.Xaml.dll`; the crash dump placed the managed thread in the Microsoft.Data.Sqlite static application-data probe before the first database connection.
 
 - **111 .NET tests passed**, with zero failures or skips, in Release configuration. This includes persisted sharing, revoked references/cursors, in-flight restrictions, safe error categories and 20 MCP adapter notification cases. Results: `artifacts/test-results/mailmeup-tests.trx`.
-- Self-contained Desktop and CLI publication, MakeAppx packaging and signing completed successfully. Build log: `artifacts/msix-build-0.1.1.3.log`.
+- Runtime account storage now calls SQLitePCL directly while retaining schema version 2 and existing database compatibility. The nine focused account-store tests passed, including concurrent initialization, updates, deletion and unsupported-schema rejection.
+- A new desktop startup smoke creates only a synthetic `example.test` account database. It reproduced the installed `0.1.1.3` crash with exit code `3221226107`, then the published and installed `0.1.1.4` executables stayed open for their observation periods. No new MailMeUp crash event was recorded for the installed fixed build.
+- Self-contained Desktop and CLI publication, MakeAppx packaging and signing completed successfully. Build log: `artifacts/msix-build-0.1.1.4.log`.
 - The published `payload/cli/mailmeup.exe` passed the CLI/MCP smoke suite, including nine tools, bounded error notifications, redirected output and a stateless first run.
-- `MailMeUp.Desktop_0.1.1.3_x64__kqhwqwq9w6r3m` installed with status `Ok`, and the Start menu entry is present. The existing local signing certificate was already trusted; no trust-store changes were made.
+- `MailMeUp.Desktop_0.1.1.4_x64__kqhwqwq9w6r3m` replaced `0.1.1.3` and reports status `Ok`. The existing local signing certificate was already trusted; no trust-store changes were made.
 - The same smoke suite passed through `%LOCALAPPDATA%\Microsoft\WindowsApps\mailmeup.exe`, preserving the alias path rather than resolving its reparse point.
-- The installed window and About & Support dialog were inspected visually. The banner, English text, website/repository/support/star links and installed version appeared; the copy button returned the expected version/platform summary. The isolated UI run created no account state and was closed after inspection.
+- The `0.1.1.3` window and About & Support dialog were inspected visually before the startup regression was reproduced with an existing registry. The banner, English text, website/repository/support/star links and installed version appeared; the copy button returned the expected version/platform summary.
 
-All current automated reads used synthetic `example.test` data or empty temporary directories with `MAILMEUP_DATA_DIR`; the owner's account registry and mailboxes were not used. Browser links were not opened. Live UI sign-in, Codex plugin installation, package upgrades, concurrent alias callers, clean-machine deployment and ARM64 runtime behavior remain untested.
+All current automated reads used synthetic `example.test` data or empty temporary directories with `MAILMEUP_DATA_DIR`; the owner's account registry and mailboxes were not used. Browser links were not opened. Live UI sign-in, Codex plugin installation, concurrent alias callers, clean-machine deployment and ARM64 runtime behavior remain untested.
 
 Earlier the same day, preview `0.1.1.2` was built and signed without installation or runtime tests. Compilation errors in the initial WinUI controls and a required alias manifest attribute were corrected before that first successful package build. The shared Hosting project and separate MSIX dependency graphs are included in the current source.
 

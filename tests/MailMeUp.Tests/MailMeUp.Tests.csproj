@@ -11,6 +11,7 @@
     <ProjectReference Include="../../src/MailMeUp.Storage/MailMeUp.Storage.csproj" />
     <ProjectReference Include="../../src/MailMeUp.Providers.Google/MailMeUp.Providers.Google.csproj" />
     <ProjectReference Include="../../src/MailMeUp.Providers.Microsoft/MailMeUp.Providers.Microsoft.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />

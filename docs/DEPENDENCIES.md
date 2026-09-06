@@ -9,8 +9,6 @@ This lists package dependencies, including transitive dependencies. Self-contain
 | Google.Apis.Auth | 1.76.0 | Apache-2.0 |
 | Google.Apis.Core | 1.76.0 | Apache-2.0 |
 | Google.Apis | 1.76.0 | Apache-2.0 |
-| Microsoft.Data.Sqlite.Core | 10.0.11 | MIT |
-| Microsoft.Data.Sqlite | 10.0.11 | MIT |
 | Microsoft.Extensions.AI.Abstractions | 10.8.3 | MIT |
 | Microsoft.Extensions.Caching.Abstractions | 10.0.10 | MIT |
 | Microsoft.Extensions.Configuration.Abstractions | 10.0.11 | MIT |

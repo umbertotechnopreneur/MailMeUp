@@ -1,6 +1,6 @@
 # Windows setup preview
 
-MailMeUp includes a small WinUI 3 setup window and MSIX packaging. Windows x64 preview `0.1.1.3` was built, signed and installed locally on 2026-09-06. The installed alias passed MCP smoke checks, and the welcome/About UI was inspected. Upgrades, browser sign-in from the UI and Codex plugin loading still need runtime validation.
+MailMeUp includes a small WinUI 3 setup window and MSIX packaging. Windows x64 preview `0.1.1.4` was built, signed and installed as an upgrade on 2026-09-06. The installed window stayed open with a synthetic existing account registry, the alias passed MCP smoke checks, and the preceding build's welcome/About UI was inspected. Clean-machine installation, browser sign-in from the UI and Codex plugin loading still need runtime validation.
 
 ## Setup
 
@@ -42,5 +42,12 @@ pwsh -NoProfile -File scripts/package-msix.ps1 -Architecture x64
 Without signing parameters the result is marked `.unsigned.msix` and is not ready for normal installation. See [MSIX developer details](../packaging/windows/README.md) for signing and platform prerequisites. Build the UI using `MailMeUp.Windows.slnx`; the original solution remains cross-platform.
 
 Before distribution, validate the published, installed executable and alias with synthetic accounts and an isolated data directory, then clean install/update behavior. A successful package build alone does not validate OAuth, sharing, plugin loading or ARM64 execution.
+
+The installed-desktop regression check creates a temporary schema-version-2 registry containing only an `example.test` account, launches the actual packaged executable and fails if the process exits during startup:
+
+```powershell
+$desktop = Join-Path (Get-AppxPackage MailMeUp.Desktop).InstallLocation 'MailMeUp.Desktop.exe'
+python scripts/smoke-test-desktop.py $desktop
+```
 
 References: [Microsoft app execution aliases](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/desktop-to-uwp-extensions#start-your-application-by-using-an-alias), [OpenAI MCP configuration](https://developers.openai.com/codex/mcp/).
