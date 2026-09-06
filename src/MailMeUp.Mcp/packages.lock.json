@@ -94,7 +94,7 @@
       "mailmeup.application": {
         "type": "Project",
         "dependencies": {
-          "MailMeUp.Core": "[0.1.0-alpha.1, )",
+          "MailMeUp.Core": "[0.1.1, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.11, )"
         }
       },

@@ -1,0 +1,149 @@
+<Window
+    x:Class="MailMeUp.Desktop.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="MailMeUp">
+    <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="20,28">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel Spacing="8" Margin="8,0,0,28">
+                <Image Source="Assets/Logo.png" Width="56" Height="56" HorizontalAlignment="Left" AutomationProperties.Name="MailMeUp logo" />
+                <TextBlock Text="MailMeUp" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Text="All your inboxes.&#x0a;One conversation." Style="{StaticResource BodyText}" Opacity="0.7" />
+            </StackPanel>
+            <ListBox x:Name="Steps" Grid.Row="1" SelectionChanged="Steps_SelectionChanged" Background="Transparent" BorderThickness="0" VerticalAlignment="Top">
+                <ListBoxItem Content="Welcome" Padding="12" />
+                <ListBoxItem Content="1. Connect accounts" Padding="12" />
+                <ListBoxItem Content="2. Choose what to share" Padding="12" />
+                <ListBoxItem Content="3. Connect to Codex" Padding="12" />
+            </ListBox>
+            <StackPanel Grid.Row="2" Spacing="4" Margin="8,16,0,0">
+                <TextBlock Text="Privacy &amp; terms" FontWeight="SemiBold" />
+                <HyperlinkButton Content="Visit our website" NavigateUri="https://umbertogiacobbi.biz/" Padding="0,4" AutomationProperties.Name="Visit Umberto Giacobbi's website" />
+                <TextBlock Text="MailMeUp" FontSize="12" Opacity="0.75" />
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <HyperlinkButton Content="Privacy policy" NavigateUri="https://umbertogiacobbi.biz/privacy/" Padding="0,4" AutomationProperties.Name="MailMeUp privacy policy" />
+                    <HyperlinkButton Content="Terms" NavigateUri="https://umbertogiacobbi.biz/terms/" Padding="0,4" AutomationProperties.Name="MailMeUp terms" />
+                </StackPanel>
+                <TextBlock Text="Google" FontSize="12" Opacity="0.75" />
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <HyperlinkButton Content="Privacy policy" NavigateUri="https://policies.google.com/privacy?hl=en" Padding="0,4" AutomationProperties.Name="Google privacy policy" />
+                    <HyperlinkButton Content="Terms" NavigateUri="https://policies.google.com/terms?hl=en" Padding="0,4" AutomationProperties.Name="Google terms of service" />
+                </StackPanel>
+                <TextBlock Text="Microsoft" FontSize="12" Opacity="0.75" />
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <HyperlinkButton Content="Privacy policy" NavigateUri="https://www.microsoft.com/en-us/privacy/privacystatement" Padding="0,4" AutomationProperties.Name="Microsoft privacy statement" />
+                    <HyperlinkButton Content="Terms" NavigateUri="https://www.microsoft.com/en-us/servicesagreement" Padding="0,4" AutomationProperties.Name="Microsoft services agreement" />
+                </StackPanel>
+                <TextBlock Text="Read-only by design" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="Windows preview" Opacity="0.6" />
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Column="1" Padding="32,28">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ContentControl x:Name="PageHost" IsTabStop="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                <Grid x:Name="Pages" Margin="0,0,12,12">
+                    <StackPanel x:Name="WelcomePage" Spacing="22">
+                        <TextBlock Text="A little setup.&#x0a;A clearer day." Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Bring your Google and Microsoft email and appointments into a conversation with Codex. Connect several accounts and decide what your assistant can read." Style="{StaticResource BodyText}" />
+                        <TextBlock Text="Review MailMeUp's privacy policy and terms, along with Google's and Microsoft's policies, using the links on the left. They stay available throughout setup and open in your browser." Style="{StaticResource BodyText}" />
+                        <Border Style="{StaticResource SetupCard}">
+                            <StackPanel Spacing="10">
+                                <FontIcon Glyph="&#xE72E;" HorizontalAlignment="Left" />
+                                <TextBlock Text="You stay in control" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock Text="MailMeUp can search and read. It cannot send mail, mark messages as read, edit or delete anything, create appointments, or invite anyone." Style="{StaticResource BodyText}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource SetupCard}">
+                            <StackPanel Spacing="10">
+                                <FontIcon Glyph="&#xE8F2;" HorizontalAlignment="Left" />
+                                <TextBlock Text="What reaches your assistant" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock Text="From shared accounts: account names and addresses, matching message headers and short previews, and calendar or appointment summaries. When asked for details, MailMeUp can also return message text, event descriptions, attendees and meeting links." Style="{StaticResource BodyText}" />
+                                <TextBlock Text="These results may be sent to your assistant's AI service. Running MailMeUp locally does not make the conversation offline. Sign-in tokens stay protected on this device and are never returned to the assistant." Style="{StaticResource BodyText}" />
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="New accounts connected here start with sharing off. You can change sharing later; this cannot withdraw information already returned in a conversation." Style="{StaticResource BodyText}" Opacity="0.75" />
+                    </StackPanel>
+                    <StackPanel x:Name="AccountsPage" Spacing="18" Visibility="Collapsed">
+                        <TextBlock Text="Connect your accounts" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Choose a provider to sign in securely in your browser. Repeat to add another personal, work or client account." Style="{StaticResource BodyText}" />
+                        <Border Style="{StaticResource SetupCard}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Request read access to" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal" Spacing="24">
+                                    <CheckBox x:Name="RequestMail" Content="Mail" IsChecked="True" />
+                                    <CheckBox x:Name="RequestCalendars" Content="Calendars" IsChecked="True" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Button x:Name="GoogleButton" Content="Connect Google" Click="GoogleButton_Click" Padding="18,12" />
+                                    <Button x:Name="MicrosoftButton" Content="Connect Microsoft" Click="MicrosoftButton_Click" Padding="18,12" />
+                                </StackPanel>
+                                <TextBlock x:Name="ProviderStatusText" Text="Loading provider setup…" Style="{StaticResource BodyText}" Opacity="0.7" />
+                                <TextBlock Text="This preview needs your own OAuth app registration. Google will ask for its downloaded Desktop client JSON; Microsoft will ask for its Application (client) ID. No client credentials are bundled." Style="{StaticResource BodyText}" Opacity="0.7" />
+                                <HyperlinkButton Content="How to register Google and Microsoft apps" NavigateUri="https://github.com/umbertotechnopreneur/MailMeUp/blob/main/docs/APP_REGISTRATION.md" Padding="0" />
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="Connected on this device" FontSize="18" FontWeight="SemiBold" />
+                        <StackPanel x:Name="ConnectedAccounts" Spacing="10" />
+                    </StackPanel>
+                    <StackPanel x:Name="SharingPage" Spacing="18" Visibility="Collapsed">
+                        <TextBlock Text="Choose what to share" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Enable an account, then choose mail and calendars. Save each account's choices to apply them to future assistant reads. Existing conversations keep the information already returned." Style="{StaticResource BodyText}" />
+                        <TextBlock Text="Loading available calendars reads their names only for this setup window. It does not share them with Codex." Style="{StaticResource BodyText}" Opacity="0.7" />
+                        <StackPanel x:Name="SharingAccounts" Spacing="16" />
+                    </StackPanel>
+                    <StackPanel x:Name="CodexPage" Spacing="18" Visibility="Collapsed">
+                        <TextBlock Text="Connect to Codex" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Install the local MailMeUp plugin so Codex can start the bridge when it needs it. Review your sharing choices first." Style="{StaticResource BodyText}" />
+                        <Border Style="{StaticResource SetupCard}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Connection status" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock x:Name="CodexStatusText" Text="Select Refresh status to inspect local Codex configuration." Style="{StaticResource BodyText}" />
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Button x:Name="InstallPluginButton" Content="Install local plugin" Click="InstallPluginButton_Click" IsEnabled="False" />
+                                    <Button Content="Refresh status" Click="RefreshCodexButton_Click" />
+                                </StackPanel>
+                                <TextBlock Text="After installation, reload Codex and ask MailMeUp for its status. Configuration alone does not confirm that a running Codex session has loaded the tools." Style="{StaticResource BodyText}" Opacity="0.7" />
+                            </StackPanel>
+                        </Border>
+                        <Expander Header="Installation details and manual setup" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="First prepare the plugin files below, then run the commands if automatic installation is unavailable. A stable Windows app alias keeps the connection independent of the MSIX version. If the alias is disabled in Windows Settings, enable it before connecting." Style="{StaticResource BodyText}" />
+                                <TextBox x:Name="CodexCommands" Header="Commands to review" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" FontFamily="Consolas" />
+                                <Button Content="Prepare plugin files for manual setup" Click="PreparePluginButton_Click" />
+                                <Button Content="Copy commands" Click="CopyCommandsButton_Click" />
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </Grid>
+                </ContentControl>
+            </ScrollViewer>
+            <StackPanel Grid.Row="1" Spacing="10" Margin="0,8,0,14">
+                <InfoBar x:Name="Notice" IsOpen="False" IsClosable="True" />
+                <StackPanel x:Name="Activity" Orientation="Horizontal" Spacing="12" Visibility="Collapsed">
+                    <ProgressRing Width="20" Height="20" IsActive="True" />
+                    <TextBlock x:Name="ActivityText" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button Content="Cancel" Click="CancelButton_Click" />
+                </StackPanel>
+            </StackPanel>
+            <Grid Grid.Row="2">
+                <Button x:Name="BackButton" Content="Back" Click="BackButton_Click" />
+                <Button x:Name="AboutButton" Content="About &amp; Support" HorizontalAlignment="Center" Click="AboutButton_Click" />
+                <Button x:Name="NextButton" Content="Get started" HorizontalAlignment="Right" Click="NextButton_Click" Style="{StaticResource AccentButtonStyle}" />
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

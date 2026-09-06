@@ -433,17 +433,28 @@
       "mailmeup.application": {
         "type": "Project",
         "dependencies": {
-          "MailMeUp.Core": "[0.1.0-alpha.1, )",
+          "MailMeUp.Core": "[0.1.1, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.11, )"
         }
       },
       "mailmeup.core": {
         "type": "Project"
       },
+      "mailmeup.hosting": {
+        "type": "Project",
+        "dependencies": {
+          "MailMeUp.Application": "[0.1.1, )",
+          "MailMeUp.Providers.Google": "[0.1.1, )",
+          "MailMeUp.Providers.Microsoft": "[0.1.1, )",
+          "MailMeUp.Security": "[0.1.1, )",
+          "MailMeUp.Storage": "[0.1.1, )",
+          "Microsoft.Extensions.Hosting": "[10.0.11, )"
+        }
+      },
       "mailmeup.mcp": {
         "type": "Project",
         "dependencies": {
-          "MailMeUp.Application": "[0.1.0-alpha.1, )",
+          "MailMeUp.Application": "[0.1.1, )",
           "ModelContextProtocol": "[2.2.0, )"
         }
       },
@@ -451,29 +462,29 @@
         "type": "Project",
         "dependencies": {
           "Google.Apis.Auth": "[1.76.0, )",
-          "MailMeUp.Core": "[0.1.0-alpha.1, )",
-          "MailMeUp.Security": "[0.1.0-alpha.1, )"
+          "MailMeUp.Core": "[0.1.1, )",
+          "MailMeUp.Security": "[0.1.1, )"
         }
       },
       "mailmeup.providers.microsoft": {
         "type": "Project",
         "dependencies": {
-          "MailMeUp.Core": "[0.1.0-alpha.1, )",
-          "MailMeUp.Security": "[0.1.0-alpha.1, )",
+          "MailMeUp.Core": "[0.1.1, )",
+          "MailMeUp.Security": "[0.1.1, )",
           "Microsoft.Identity.Client": "[4.88.0, )"
         }
       },
       "mailmeup.security": {
         "type": "Project",
         "dependencies": {
-          "MailMeUp.Core": "[0.1.0-alpha.1, )",
+          "MailMeUp.Core": "[0.1.1, )",
           "Microsoft.Identity.Client.Extensions.Msal": "[4.88.0, )"
         }
       },
       "mailmeup.storage": {
         "type": "Project",
         "dependencies": {
-          "MailMeUp.Core": "[0.1.0-alpha.1, )",
+          "MailMeUp.Core": "[0.1.1, )",
           "Microsoft.Data.Sqlite": "[10.0.11, )"
         }
       },

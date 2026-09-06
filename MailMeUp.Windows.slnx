@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="ARM64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/MailMeUp.Desktop/MailMeUp.Desktop.csproj" />
+    <Project Path="src/MailMeUp.Cli/MailMeUp.Cli.csproj" />
+  </Folder>
+</Solution>

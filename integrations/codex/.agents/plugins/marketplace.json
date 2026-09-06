@@ -1,0 +1,20 @@
+{
+  "name": "mailmeup-local",
+  "interface": {
+    "displayName": "MailMeUp local installation"
+  },
+  "plugins": [
+    {
+      "name": "mailmeup",
+      "source": {
+        "source": "local",
+        "path": "./plugins/mailmeup"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

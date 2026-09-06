@@ -6,13 +6,16 @@ using MailMeUp.Security;
 using MailMeUp.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MailMeUp.Cli;
+namespace MailMeUp.Hosting;
 
-internal static class ServiceRegistration
+/// <summary>Composes the same application services for local CLI, MCP and desktop adapters.</summary>
+public static class ServiceRegistration
 {
-    internal static void AddMailMeUp(this IServiceCollection services, string dataDirectory)
+    /// <summary>Registers provider readers, protected credentials and local metadata in one data directory.</summary>
+    public static void AddMailMeUp(this IServiceCollection services, string dataDirectory)
     {
         services.AddSingleton<IAccountStore>(_ => new SqliteAccountStore(dataDirectory));
+        services.AddSingleton<IAccountSharingStore>(_ => new JsonAccountSharingStore(dataDirectory));
         services.AddSingleton<IProviderConfigurationStore>(_ => new JsonProviderConfigurationStore(dataDirectory));
         services.AddSingleton<ISecretStore>(_ => new OsProtectedSecretStore(dataDirectory));
         services.AddSingleton<IProviderModule, GoogleProviderModule>();

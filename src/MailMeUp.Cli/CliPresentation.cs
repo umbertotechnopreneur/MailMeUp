@@ -304,11 +304,17 @@ internal sealed class CliPresentation
         return Markup.Escape(clean);
     }
 
-    private static IAnsiConsole CreateConsole(TextWriter writer, bool redirected, bool noColor) => AnsiConsole.Create(new AnsiConsoleSettings
+    private static IAnsiConsole CreateConsole(TextWriter writer, bool redirected, bool noColor)
     {
-        Out = new AnsiConsoleOutput(writer),
-        Ansi = redirected || noColor || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR")) ||
-            Environment.GetEnvironmentVariable("TERM") == "dumb" ? AnsiSupport.No : AnsiSupport.Detect,
-        Interactive = redirected || Console.IsInputRedirected ? InteractionSupport.No : InteractionSupport.Detect
-    });
+        var plain = redirected || noColor || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR")) ||
+            Environment.GetEnvironmentVariable("TERM") == "dumb";
+        return AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Out = new AnsiConsoleOutput(writer),
+            Ansi = plain ? AnsiSupport.No : AnsiSupport.Detect,
+            ColorSystem = plain ? ColorSystemSupport.NoColors : ColorSystemSupport.Detect,
+            Interactive = redirected || Console.IsInputRedirected ? InteractionSupport.No : InteractionSupport.Detect,
+            Enrichment = new ProfileEnrichment { UseDefaultEnrichers = !plain }
+        });
+    }
 }

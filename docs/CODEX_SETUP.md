@@ -1,45 +1,52 @@
 # Connect to Codex
 
-MailMeUp is a local MCP program. No marketplace is required.
+MailMeUp runs locally as a read-only MCP server. Google and Microsoft sign-in and sharing choices stay in MailMeUp. Requested message and appointment content can reach the assistant's AI service.
 
-**The current source exposes nine read-only MCP tools. Account setup remains a local CLI action; real provider sign-in still needs the app registrations and pilot accounts.**
+## Windows desktop setup
 
-## 1. Build or extract
+The new WinUI setup source includes **Connect to Codex**. After installing the MSIX and choosing what to share:
 
-Developers can follow [the build guide](DEVELOPMENT.md). The current MVP target is Windows x64; extract its ZIP into a stable folder.
+1. Select **Refresh status** to inspect the local Codex configuration.
+2. Review the displayed local plugin path and commands.
+3. Select **Install plugin**, then start a new Codex task to load its tools.
 
-## 2. Register the program
+The setup uses the native Codex CLI. It copies the bundled plugin into `%LOCALAPPDATA%\MailMeUp\codex-plugin`, adds that local marketplace and installs `mailmeup@mailmeup-local`. When `MAILMEUP_DATA_DIR` is set, the plugin files are placed under that directory and the same data directory is passed to the MCP server. These are local files and configuration changes; nothing is published to a public marketplace.
 
-Windows example:
+If the native CLI is unavailable, prepare the plugin files in MailMeUp and run the displayed commands in a terminal where `codex` is available. A CLI installed only as a script uses this manual route.
+
+An existing direct MailMeUp MCP registration blocks guided plugin installation to avoid duplicate tools. Review that registration in Codex and remove it yourself before switching to the plugin. Setup does not remove registrations or change other plugins.
+
+**Status means configuration status.** An installed and enabled plugin has not necessarily completed an MCP handshake. Start a new Codex task and ask it to show MailMeUp status and configured accounts when you are ready to exercise the connection. The desktop/MSIX onboarding path still requires owner-approved build and package validation.
+
+## Stable path across MSIX updates
+
+MSIX package directories contain a version. Do not configure Codex with an executable inside `C:\Program Files\WindowsApps\MailMeUp_...`.
+
+The package declares the `mailmeup.exe` app execution alias. Setup writes the fully resolved path under the current user's `%LOCALAPPDATA%\Microsoft\WindowsApps\mailmeup.exe` into the plugin, together with `--stdio`. Windows resolves that alias to the installed package, so ordinary updates that preserve the package identity and alias do not require a new Codex executable path.
+
+If Windows disables the alias, enable MailMeUp under **Settings > Apps > Advanced app settings > App execution aliases**. Reinstalling a different package identity or uninstalling MailMeUp can require setup again.
+
+The local plugin source and its MCP command are separate: routine executable updates use the alias immediately, while changes to plugin metadata or wiring require selecting **Install plugin** again and starting a new Codex task.
+
+## Direct MCP alternative
+
+A direct registration is also supported and does not install a plugin. Use one connection method at a time. For an installed MSIX, run this in PowerShell:
+
+```powershell
+$mailmeupAlias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\mailmeup.exe'
+codex mcp add mailmeup -- $mailmeupAlias --stdio
+```
+
+The desktop's displayed direct MCP command also includes the resolved `MAILMEUP_DATA_DIR`. Use that command when using an explicit data directory.
+
+For the existing Windows x64 ZIP, extract into a stable directory and register that executable:
 
 ```powershell
 codex mcp add mailmeup -- 'C:\Tools\MailMeUp\mailmeup.exe' --stdio
 ```
 
-Linux/macOS reference only — these platforms are not tested or supported by the current MVP:
+Codex starts the process. Mailbox authentication happens in MailMeUp, not through `codex mcp login`. For direct registrations, `codex mcp list` shows configuration and `codex mcp remove mailmeup` removes only the MCP registration; it does not revoke provider access or delete MailMeUp data.
 
-```sh
-codex mcp add mailmeup -- /absolute/path/mailmeup --stdio
-```
+For common mailbox requests, use unread-mail or date-range search. Mail searches exclude Spam/Junk and Trash/Deleted Items by default. Account and category sharing choices apply to assistant reads.
 
-Local source-build example:
-
-```powershell
-codex mcp add mailmeup -- dotnet 'E:\MailMeUp\src\MailMeUp.Cli\bin\Release\net10.0\mailmeup.dll' --stdio
-```
-
-Use your own absolute path. Codex starts the process; you do not start another server manually.
-
-## 3. Check it
-
-Run `codex mcp list`. Reload the Codex task/app if necessary, then ask:
-
-> Use MailMeUp to show its status and list configured accounts.
-
-An empty list is expected before local setup. Mailbox sign-in happens through `mailmeup accounts connect`, not `codex mcp login`. Real-provider checks remain pending.
-
-For common mailbox requests, prefer `search_unread_mail` for unread messages and `search_mail_by_date` for a received-time range. Both exclude Spam/Junk and Trash/Deleted Items by default; omit `account_ids` to include all mail-enabled accounts.
-
-Remove the registration with `codex mcp remove mailmeup`. This does not delete data or revoke provider access.
-
-Reference: [OpenAI MCP setup](https://developers.openai.com/codex/mcp/), checked alongside the local CLI on 2026-09-05.
+Developer references: [OpenAI MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli), [plugin packaging](https://developers.openai.com/plugins/build/plugins), and [Codex plugin CLI commands](https://learn.chatgpt.com/codex/developer-commands). Documentation read on 2026-09-06; the new installer integration has not been executed.

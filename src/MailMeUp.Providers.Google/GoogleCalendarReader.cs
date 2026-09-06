@@ -96,6 +96,10 @@ public sealed class GoogleCalendarReader : ICalendarReader
         {
             throw;
         }
+        catch (HttpRequestException)
+        {
+            throw new ProviderReadException("The provider could not be reached.", ReadFailureKind.Network);
+        }
         catch (Exception)
         {
             throw new ProviderReadException("Google calendars could not be listed.");
@@ -159,6 +163,10 @@ public sealed class GoogleCalendarReader : ICalendarReader
         {
             throw;
         }
+        catch (HttpRequestException)
+        {
+            throw new ProviderReadException("The provider could not be reached.", ReadFailureKind.Network);
+        }
         catch (Exception)
         {
             throw new ProviderReadException("Google appointments could not be searched.");
@@ -204,6 +212,10 @@ public sealed class GoogleCalendarReader : ICalendarReader
         catch (ProviderReadException)
         {
             throw;
+        }
+        catch (HttpRequestException)
+        {
+            throw new ProviderReadException("The provider could not be reached.", ReadFailureKind.Network);
         }
         catch (Exception)
         {
@@ -363,7 +375,7 @@ public sealed class GoogleCalendarReader : ICalendarReader
         using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new ProviderReadException("Google Calendar returned an unsuccessful response.");
+            throw new ProviderReadException("Google Calendar returned an unsuccessful response.", ClassifyHttpFailure((int)response.StatusCode));
         }
 
         if (response.Content.Headers.ContentLength is > MaximumJsonBytes)
@@ -436,4 +448,13 @@ public sealed class GoogleCalendarReader : ICalendarReader
     }
 
     private sealed record EventBoundaries(DateTimeOffset SortStart, string Start, string End, bool AllDay);
+    private static ReadFailureKind ClassifyHttpFailure(int statusCode) => statusCode switch
+    {
+        401 => ReadFailureKind.SignInRequired,
+        403 => ReadFailureKind.AccessDenied,
+        404 or 410 => ReadFailureKind.ItemUnavailable,
+        408 or 504 => ReadFailureKind.Timeout,
+        429 or >= 500 => ReadFailureKind.ProviderUnavailable,
+        _ => ReadFailureKind.Unknown
+    };
 }

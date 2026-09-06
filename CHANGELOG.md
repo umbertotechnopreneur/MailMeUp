@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Auto-format staged C# files before commits, apply style fixes during local validation and keep CI formatting checks read-only.
+- Add an English About & Support dialog with a generated MailMeUp banner, app-version copying, creator website and GitHub links, support issues, and an invitation to star the project.
+
+- Add a centered WinUI 3 setup window with a privacy welcome, Google/Microsoft browser sign-in, multiple accounts, sharing choices and guided local Codex plugin installation.
+- Keep the setup interface in English, with persistent links to the website and the MailMeUp, Google and Microsoft privacy policies and terms.
+- Share application service composition between CLI/MCP and the Windows UI; keep the MCP process separate from the setup window.
+- Store local account, mail and calendar sharing separately from OAuth grants, with new UI-connected accounts initially unshared and read restrictions enforced in running MCP sessions.
+- Add Windows MSIX packaging with a stable `mailmeup.exe` console app execution alias and optional signing with an existing certificate.
+- Ask callers to notify the user in plain English when MailMeUp cannot read a mailbox, including actionable, sanitized error details and partial-coverage reporting.
+
+The desktop, plugin and sharing behavior remains a preview. Windows x64 MSIX `0.1.1.3` was built, signed and locally installed; 111 synthetic tests and published/installed-alias smoke checks passed. The About dialog, generated banner and version-copy action were inspected. Clean-machine installation, upgrades, UI sign-in and Codex plugin loading remain pending.
+
 ## 0.1.1 — Mail search ergonomics
 
 - Add dedicated unread and received-date-range mail tools with sender/recipient contains and attachment filters; exclude Gmail Spam/Trash and Microsoft Junk/Deleted Items by default.

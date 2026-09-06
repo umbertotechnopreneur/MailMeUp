@@ -12,6 +12,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
     private const int MaximumConcurrentMailAccountReads = 4;
     private static readonly TimeSpan ProviderReadTimeout = TimeSpan.FromSeconds(30);
     private readonly IAccountStore _accounts;
+    private readonly IAccountSharingStore _sharing;
     private readonly IReadOnlyList<ProviderDescriptor> _providers;
     private readonly IReadOnlyDictionary<string, IProviderSetupService> _providerSetupServices;
     private readonly IReadOnlyDictionary<string, IAccountConnector> _accountConnectors;
@@ -26,9 +27,11 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         IEnumerable<IProviderSetupService> providerSetupServices,
         IEnumerable<IAccountConnector> accountConnectors,
         IEnumerable<IMailReader> mailReaders,
-        IEnumerable<ICalendarReader> calendarReaders)
+        IEnumerable<ICalendarReader> calendarReaders,
+        IAccountSharingStore? sharingStore = null)
     {
         _accounts = accounts;
+        _sharing = sharingStore ?? new MemoryAccountSharingStore();
         _providerSetupServices = providerSetupServices.ToDictionary(service => service.ProviderId, StringComparer.Ordinal);
         _accountConnectors = accountConnectors.ToDictionary(connector => connector.ProviderId, StringComparer.Ordinal);
         _mailReaders = mailReaders.ToDictionary(reader => reader.ProviderId, StringComparer.Ordinal);
@@ -65,6 +68,55 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
     /// <inheritdoc />
     public Task<IReadOnlyList<Account>> ListAccountsAsync(CancellationToken cancellationToken = default) =>
         _accounts.ListAsync(cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Account>> ListSharedAccountsAsync(CancellationToken cancellationToken = default)
+    {
+        var sharing = await ReadSharingSnapshotAsync(cancellationToken);
+        await EnsureSharingUnchangedAsync(sharing, cancellationToken);
+        return sharing.Accounts;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<AccountSharingSettings>> ListAccountSharingAsync(CancellationToken cancellationToken = default) =>
+        (await ReadSharingSnapshotAsync(cancellationToken)).Settings.Values.ToArray();
+
+    /// <inheritdoc />
+    public async Task<AccountSharingSettings> SaveAccountSharingAsync(AccountSharingSettings settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        settings.Validate();
+        if (!(await _accounts.ListAsync(cancellationToken)).Any(account => string.Equals(account.Id, settings.AccountId, StringComparison.Ordinal)))
+        {
+            throw new ArgumentException("The account is no longer connected.", nameof(settings));
+        }
+
+        var normalized = settings with { CalendarIds = settings.CalendarIds?.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() };
+        await _sharing.SaveAsync(normalized, cancellationToken);
+        return normalized;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ProviderCalendar>> ListAvailableCalendarsAsync(string accountId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        var account = (await _accounts.ListAsync(cancellationToken)).SingleOrDefault(item => string.Equals(item.Id, accountId, StringComparison.Ordinal))
+            ?? throw new ArgumentException("The account is no longer connected.", nameof(accountId));
+        if (!account.CalendarReadEnabled || !_calendarReaders.TryGetValue(account.Provider, out var reader))
+        {
+            throw new InvalidOperationException("Calendar discovery requires calendar consent for this account.");
+        }
+
+        // This operation is reserved for the owner's local setup UI and issues no assistant references.
+        try
+        {
+            return await ReadWithDeadlineAsync(token => reader.ListCalendarsAsync(account, token), cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderReadException("Calendar discovery timed out. Try loading calendars again.");
+        }
+    }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ProviderSetupStatus>> ListProviderSetupAsync(CancellationToken cancellationToken = default)
@@ -109,6 +161,12 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         var result = await connector.ConnectAsync(options, cancellationToken);
         try
         {
+            if (!options.ShareWithAssistant && !existingAccounts.Any(account => string.Equals(account.Id, result.Account.Id, StringComparison.Ordinal)))
+            {
+                // Persist the denial before publishing account metadata to another running MCP process.
+                await _sharing.SaveAsync(new AccountSharingSettings(result.Account.Id, false, false, false, []), cancellationToken);
+            }
+
             await _accounts.SaveAsync(result.Account, cancellationToken);
             return result;
         }
@@ -150,6 +208,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         }
 
         await connector.DisconnectAsync(account, cancellationToken);
+        // Keep a denial tombstone so a later reconnect cannot silently restore the previous assistant access.
+        await _sharing.SaveAsync(new AccountSharingSettings(account.Id, false, false, false, []), cancellationToken);
         var removed = await _accounts.DeleteAsync(account.Id, cancellationToken);
         return new AccountRemovalResult(account.Id, removed);
     }
@@ -195,7 +255,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             request.UnreadOnly,
             request.HasAttachments);
 
-        var allAccounts = await _accounts.ListAsync(cancellationToken);
+        var sharing = await ReadSharingSnapshotAsync(cancellationToken);
+        var allAccounts = sharing.Accounts;
         MailCursorState state;
         IReadOnlyList<Account> selectedAccounts;
         if (string.IsNullOrWhiteSpace(request.Cursor))
@@ -243,6 +304,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             accountReadGate,
             cancellationToken));
         await Task.WhenAll(accountReads);
+        await EnsureSharingUnchangedAsync(sharing, cancellationToken);
 
         var candidates = state.Accounts
             .SelectMany(pair => pair.Value.Items.Select(item => new MailCandidate(pair.Key, item)))
@@ -274,14 +336,14 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             account.Items.Count > 0 || account.NextProviderCursor is not null);
         var nextCursor = hasMore ? _references.Put("c_", state.Copy()) : null;
         var failures = state.Accounts
-            .Where(pair => pair.Value.Failure is not null)
-            .Select(pair => new AccountReadFailure(pair.Key, pair.Value.Failure!))
+            .Where(pair => pair.Value.Failure is not null && !sharing.IsHidden(pair.Key))
+            .Select(pair => new AccountReadFailure(pair.Key, pair.Value.Failure!, pair.Value.FailureKind))
             .OrderBy(failure => failure.AccountId, StringComparer.Ordinal)
             .ToArray();
 
         return new MailSearchResult(
             items,
-            state.AccountIds,
+            state.AccountIds.Where(id => !sharing.IsHidden(id)).ToArray(),
             failures,
             failures.Length == 0,
             nextCursor);
@@ -306,6 +368,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 accountState.Started = true;
                 accountState.NextProviderCursor = null;
                 accountState.Failure = "The source account is no longer available for mail reads.";
+                accountState.FailureKind = ReadFailureKind.LocalConfiguration;
                 return;
             }
 
@@ -319,6 +382,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 accountState.Started = true;
                 accountState.NextProviderCursor = null;
                 accountState.Failure = "Mail reading is unavailable for this provider.";
+                accountState.FailureKind = ReadFailureKind.ProviderUnavailable;
                 return;
             }
 
@@ -359,6 +423,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 accountState.Started = true;
                 accountState.NextProviderCursor = null;
                 accountState.Failure = ReadFailureReason(exception);
+                accountState.FailureKind = GetReadFailureKind(exception);
             }
         }
         finally
@@ -378,7 +443,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         }
 
         var address = _references.Get<MailItemAddress>(request.Reference, "m_");
-        var account = (await _accounts.ListAsync(cancellationToken))
+        var sharing = await ReadSharingSnapshotAsync(cancellationToken);
+        var account = sharing.Accounts
             .SingleOrDefault(item => string.Equals(item.Id, address.AccountId, StringComparison.Ordinal))
             ?? throw new InvalidOperationException("The source account is no longer connected.");
         if (!account.MailReadEnabled || !_mailReaders.TryGetValue(account.Provider, out var reader))
@@ -393,8 +459,9 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new ProviderReadException("Provider read timed out. Try reading this message again.");
+            throw new ProviderReadException("Provider read timed out. Try reading this message again.", ReadFailureKind.Timeout);
         }
+        await EnsureSharingUnchangedAsync(sharing, cancellationToken);
         var offset = Math.Min(request.Offset, message.PlainText.Length);
         var length = Math.Min(request.MaxCharacters, message.PlainText.Length - offset);
         var text = message.PlainText.Substring(offset, length);
@@ -419,7 +486,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var accounts = SelectCalendarAccounts(await _accounts.ListAsync(cancellationToken), request.AccountIds);
+        var sharing = await ReadSharingSnapshotAsync(cancellationToken);
+        var accounts = SelectCalendarAccounts(sharing.Accounts, request.AccountIds);
         var calendars = new List<CalendarListItem>();
         var failures = new List<AccountReadFailure>();
         foreach (var account in accounts)
@@ -427,14 +495,15 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             cancellationToken.ThrowIfCancellationRequested();
             if (!_calendarReaders.TryGetValue(account.Provider, out var reader))
             {
-                failures.Add(new AccountReadFailure(account.Id, "Calendar reading is unavailable for this provider."));
+                failures.Add(new AccountReadFailure(account.Id, "Calendar reading is unavailable for this provider.", ReadFailureKind.ProviderUnavailable));
                 continue;
             }
 
             try
             {
                 var providerCalendars = await ReadWithDeadlineAsync(token => reader.ListCalendarsAsync(account, token), cancellationToken);
-                foreach (var calendar in providerCalendars.Take(100))
+                var selectedCalendars = providerCalendars.Where(calendar => sharing.AllowsCalendar(account.Id, calendar.ProviderCalendarId)).ToArray();
+                foreach (var calendar in selectedCalendars.Take(100))
                 {
                     var reference = _references.Put(
                         "cal_",
@@ -446,19 +515,20 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                         calendar.Primary,
                         CompactNullable(calendar.TimeZone, 100)));
                 }
-                if (providerCalendars.Count > 100)
+                if (selectedCalendars.Length > 100)
                 {
-                    failures.Add(new AccountReadFailure(account.Id, "Only the first 100 calendars were returned for this account. Calendar coverage is incomplete."));
+                    failures.Add(new AccountReadFailure(account.Id, "Only the first 100 calendars were returned for this account. Calendar coverage is incomplete.", ReadFailureKind.ResultLimit));
                 }
             }
             catch (Exception exception) when (IsProviderReadFailure(exception, cancellationToken))
             {
                 failures.Add(new AccountReadFailure(
                     account.Id,
-                    ReadFailureReason(exception)));
+                    ReadFailureReason(exception), GetReadFailureKind(exception)));
             }
         }
 
+        await EnsureSharingUnchangedAsync(sharing, cancellationToken);
         return new CalendarListResult(
             calendars
                 .OrderBy(calendar => calendar.AccountId, StringComparer.Ordinal)
@@ -488,12 +558,13 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
             throw new ArgumentOutOfRangeException(nameof(request), "Event search limit must be between 1 and 50.");
         }
 
-        var allAccounts = await _accounts.ListAsync(cancellationToken);
+        var sharing = await ReadSharingSnapshotAsync(cancellationToken);
+        var allAccounts = sharing.Accounts;
         var scopeKey = CreateEventScopeKey(request);
         EventCursorState state;
         if (string.IsNullOrWhiteSpace(request.Cursor))
         {
-            state = await CreateEventCursorStateAsync(request, start, end, scopeKey, allAccounts, cancellationToken);
+            state = await CreateEventCursorStateAsync(request, start, end, scopeKey, sharing, cancellationToken);
         }
         else
         {
@@ -513,12 +584,14 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         foreach (var target in state.Targets.Values)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!accountsById.TryGetValue(target.AccountId, out var account) || !account.CalendarReadEnabled)
+            if (!accountsById.TryGetValue(target.AccountId, out var account) || !account.CalendarReadEnabled ||
+                !sharing.AllowsCalendar(target.AccountId, target.ProviderCalendarId))
             {
                 target.Events.Clear();
                 target.Started = true;
                 target.NextProviderCursor = null;
                 target.Failure = "The source account is no longer available for calendar reads.";
+                target.FailureKind = ReadFailureKind.LocalConfiguration;
                 continue;
             }
 
@@ -532,6 +605,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 target.Started = true;
                 target.NextProviderCursor = null;
                 target.Failure = "Calendar reading is unavailable for this provider.";
+                target.FailureKind = ReadFailureKind.ProviderUnavailable;
                 continue;
             }
 
@@ -569,9 +643,11 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 target.Started = true;
                 target.NextProviderCursor = null;
                 target.Failure = ReadFailureReason(exception);
+                target.FailureKind = GetReadFailureKind(exception);
             }
         }
 
+        await EnsureSharingUnchangedAsync(sharing, cancellationToken);
         var candidates = state.Targets
             .SelectMany(pair => pair.Value.Events.Select(item => new EventCandidate(pair.Key, item)))
             .OrderBy(candidate => candidate.Event.SortStart)
@@ -605,14 +681,15 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         var failures = state.InitialFailures
             .Concat(state.Targets.Values
                 .Where(target => target.Failure is not null)
-                .Select(target => new AccountReadFailure(target.AccountId, target.Failure!)))
+                .Select(target => new AccountReadFailure(target.AccountId, target.Failure!, target.FailureKind)))
+            .Where(failure => !sharing.IsHidden(failure.AccountId))
             .GroupBy(failure => failure.AccountId, StringComparer.Ordinal)
             .Select(group => group.First())
             .OrderBy(failure => failure.AccountId, StringComparer.Ordinal)
             .ToArray();
         return new EventSearchResult(
             events,
-            state.AccountIds,
+            state.AccountIds.Where(id => !sharing.IsHidden(id)).ToArray(),
             failures,
             failures.Length == 0,
             nextCursor);
@@ -629,10 +706,12 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         }
 
         var address = _references.Get<EventAddress>(request.Reference, "evt_");
-        var account = (await _accounts.ListAsync(cancellationToken))
+        var sharing = await ReadSharingSnapshotAsync(cancellationToken);
+        var account = sharing.Accounts
             .SingleOrDefault(item => string.Equals(item.Id, address.AccountId, StringComparison.Ordinal))
             ?? throw new InvalidOperationException("The source account is no longer connected.");
-        if (!account.CalendarReadEnabled || !_calendarReaders.TryGetValue(account.Provider, out var reader))
+        if (!account.CalendarReadEnabled || !sharing.AllowsCalendar(account.Id, address.ProviderCalendarId) ||
+            !_calendarReaders.TryGetValue(account.Provider, out var reader))
         {
             throw new InvalidOperationException("Calendar reading is unavailable for the source account.");
         }
@@ -648,8 +727,9 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new ProviderReadException("Provider read timed out. Try reading this appointment again.");
+            throw new ProviderReadException("Provider read timed out. Try reading this appointment again.", ReadFailureKind.Timeout);
         }
+        await EnsureSharingUnchangedAsync(sharing, cancellationToken);
         var descriptionLength = Math.Min(providerEvent.Description.Length, request.MaxDescriptionCharacters);
         return new EventResult(
             request.Reference,
@@ -672,9 +752,10 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         DateTimeOffset start,
         DateTimeOffset end,
         string scopeKey,
-        IReadOnlyList<Account> allAccounts,
+        SharingSnapshot sharing,
         CancellationToken cancellationToken)
     {
+        var allAccounts = sharing.Accounts;
         var targets = new Dictionary<string, CalendarTargetCursorState>(StringComparer.Ordinal);
         var failures = new List<AccountReadFailure>();
         IReadOnlyList<string> accountIds;
@@ -702,9 +783,10 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                     continue;
                 }
 
-                if (!byId.TryGetValue(address.AccountId, out var account) || !account.CalendarReadEnabled)
+                if (!byId.TryGetValue(address.AccountId, out var account) || !account.CalendarReadEnabled ||
+                    !sharing.AllowsCalendar(address.AccountId, address.ProviderCalendarId))
                 {
-                    failures.Add(new AccountReadFailure(address.AccountId, "The source account is no longer available for calendar reads."));
+                    failures.Add(new AccountReadFailure(address.AccountId, "The source account is no longer available for calendar reads.", ReadFailureKind.LocalConfiguration));
                     targets[$"t{targetIndex++}"] = new CalendarTargetCursorState(address.AccountId, address.ProviderCalendarId, reference);
                     continue;
                 }
@@ -727,17 +809,18 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!_calendarReaders.TryGetValue(account.Provider, out var reader))
                 {
-                    failures.Add(new AccountReadFailure(account.Id, "Calendar reading is unavailable for this provider."));
+                    failures.Add(new AccountReadFailure(account.Id, "Calendar reading is unavailable for this provider.", ReadFailureKind.ProviderUnavailable));
                     continue;
                 }
 
                 try
                 {
                     var calendars = await ReadWithDeadlineAsync(token => reader.ListCalendarsAsync(account, token), cancellationToken);
-                    var calendar = calendars.FirstOrDefault(item => item.Primary) ?? calendars.FirstOrDefault();
+                    var selectedCalendars = calendars.Where(item => sharing.AllowsCalendar(account.Id, item.ProviderCalendarId)).ToArray();
+                    var calendar = selectedCalendars.FirstOrDefault(item => item.Primary) ?? selectedCalendars.FirstOrDefault();
                     if (calendar is null)
                     {
-                        failures.Add(new AccountReadFailure(account.Id, "No readable calendar is available."));
+                        failures.Add(new AccountReadFailure(account.Id, "No readable calendar is available.", ReadFailureKind.ItemUnavailable));
                         continue;
                     }
 
@@ -753,12 +836,75 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 {
                     failures.Add(new AccountReadFailure(
                         account.Id,
-                        ReadFailureReason(exception)));
+                        ReadFailureReason(exception), GetReadFailureKind(exception)));
                 }
             }
         }
 
         return new EventCursorState(start, end, scopeKey, accountIds, targets, failures);
+    }
+
+    private async Task<SharingSnapshot> ReadSharingSnapshotAsync(CancellationToken cancellationToken)
+    {
+        var accounts = await _accounts.ListAsync(cancellationToken);
+        var settings = new Dictionary<string, AccountSharingSettings>(StringComparer.Ordinal);
+        foreach (var account in accounts)
+        {
+            var stored = await _sharing.GetAsync(account.Id, cancellationToken) ?? new AccountSharingSettings(account.Id);
+            stored.Validate();
+            settings.Add(account.Id, stored);
+        }
+
+        var shared = accounts.Where(account => settings[account.Id].Enabled).Select(account => account with
+        {
+            MailReadEnabled = account.MailReadEnabled && settings[account.Id].ShareMail,
+            CalendarReadEnabled = account.CalendarReadEnabled && settings[account.Id].ShareCalendars &&
+                settings[account.Id].CalendarIds is not { Count: 0 }
+        }).ToArray();
+        // Compare the complete access snapshot before releasing results, including changes made by another process.
+        var fingerprint = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            Accounts = accounts.OrderBy(account => account.Id, StringComparer.Ordinal),
+            Settings = settings.Values.OrderBy(item => item.AccountId, StringComparer.Ordinal)
+        });
+        return new SharingSnapshot(shared, settings, fingerprint);
+    }
+
+    private async Task EnsureSharingUnchangedAsync(SharingSnapshot snapshot, CancellationToken cancellationToken)
+    {
+        if (!string.Equals(snapshot.Fingerprint, (await ReadSharingSnapshotAsync(cancellationToken)).Fingerprint, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Account access changed during this read. Start a new request to use the current sharing choices.");
+        }
+    }
+
+    private sealed record SharingSnapshot(
+        IReadOnlyList<Account> Accounts,
+        IReadOnlyDictionary<string, AccountSharingSettings> Settings,
+        string Fingerprint)
+    {
+        public bool AllowsCalendar(string accountId, string calendarId) =>
+            Settings.TryGetValue(accountId, out var settings) && settings.AllowsCalendar(calendarId);
+
+        public bool IsHidden(string accountId) => Settings.TryGetValue(accountId, out var settings) && !settings.Enabled;
+    }
+
+    private sealed class MemoryAccountSharingStore : IAccountSharingStore
+    {
+        private readonly ConcurrentDictionary<string, AccountSharingSettings> _settings = new(StringComparer.Ordinal);
+
+        public Task<AccountSharingSettings?> GetAsync(string accountId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(_settings.GetValueOrDefault(accountId));
+        }
+
+        public Task SaveAsync(AccountSharingSettings settings, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _settings[settings.AccountId] = settings;
+            return Task.CompletedTask;
+        }
     }
 
     private static async Task<T> ReadWithDeadlineAsync<T>(Func<CancellationToken, Task<T>> read, CancellationToken cancellationToken)
@@ -775,11 +921,29 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         !cancellationToken.IsCancellationRequested &&
         (exception is ProviderReadException or ProviderAuthenticationException or OperationCanceledException or ProviderPaginationException);
 
-    private static string ReadFailureReason(Exception exception) => exception switch
+    private static string ReadFailureReason(Exception exception)
     {
-        OperationCanceledException => "Provider read timed out. Try this search again.",
-        ProviderPaginationException => "Provider pagination could not complete within its limits. Results are partial; try a narrower search.",
-        _ => "Provider read failed. Reconnect this account or try a new search."
+        if (exception is OperationCanceledException)
+        {
+            return "Provider read timed out. Try this search again.";
+        }
+
+        if (exception is ProviderPaginationException)
+        {
+            return "Provider pagination could not complete within its limits. Results are partial; try a narrower search.";
+        }
+
+        var advice = ReadFailureGuidance.Describe(GetReadFailureKind(exception));
+        return $"{advice.Explanation} {advice.Action}";
+    }
+
+    private static ReadFailureKind GetReadFailureKind(Exception exception) => exception switch
+    {
+        ProviderReadException provider => provider.Kind,
+        ProviderAuthenticationException => ReadFailureKind.SignInRequired,
+        OperationCanceledException => ReadFailureKind.Timeout,
+        ProviderPaginationException => ReadFailureKind.ResultLimit,
+        _ => ReadFailureKind.Unknown
     };
 
     private static void RegisterProviderCursor(HashSet<string> seenCursors, string? cursor)
@@ -982,6 +1146,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         public int ProviderPageSize { get; set; }
         public string? NextProviderCursor { get; set; }
         public string? Failure { get; set; }
+        public ReadFailureKind FailureKind { get; set; }
         public HashSet<string> SeenProviderCursors { get; } = new(StringComparer.Ordinal);
         public List<ProviderMailSummary> Items { get; } = [];
 
@@ -992,7 +1157,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 Started = Started,
                 ProviderPageSize = ProviderPageSize,
                 NextProviderCursor = NextProviderCursor,
-                Failure = Failure
+                Failure = Failure,
+                FailureKind = FailureKind
             };
             clone.Items.AddRange(Items);
             clone.SeenProviderCursors.UnionWith(SeenProviderCursors);
@@ -1029,6 +1195,7 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
         public int ProviderPageSize { get; set; }
         public string? NextProviderCursor { get; set; }
         public string? Failure { get; set; }
+        public ReadFailureKind FailureKind { get; set; }
         public HashSet<string> SeenProviderCursors { get; } = new(StringComparer.Ordinal);
         public List<ProviderEventSummary> Events { get; } = [];
 
@@ -1039,7 +1206,8 @@ public sealed class MailMeUpApplication : IMailMeUpApplication
                 Started = Started,
                 ProviderPageSize = ProviderPageSize,
                 NextProviderCursor = NextProviderCursor,
-                Failure = Failure
+                Failure = Failure,
+                FailureKind = FailureKind
             };
             clone.Events.AddRange(Events);
             clone.SeenProviderCursors.UnionWith(SeenProviderCursors);

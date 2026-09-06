@@ -1,8 +1,23 @@
 # Validation
 
+## Windows onboarding changes
+
+**Windows x64, 2026-09-06 — package 0.1.1.3.** The owner authorized builds, tests and local installation after adding About & Support and the generated banner.
+
+- **111 .NET tests passed**, with zero failures or skips, in Release configuration. This includes persisted sharing, revoked references/cursors, in-flight restrictions, safe error categories and 20 MCP adapter notification cases. Results: `artifacts/test-results/mailmeup-tests.trx`.
+- Self-contained Desktop and CLI publication, MakeAppx packaging and signing completed successfully. Build log: `artifacts/msix-build-0.1.1.3.log`.
+- The published `payload/cli/mailmeup.exe` passed the CLI/MCP smoke suite, including nine tools, bounded error notifications, redirected output and a stateless first run.
+- `MailMeUp.Desktop_0.1.1.3_x64__kqhwqwq9w6r3m` installed with status `Ok`, and the Start menu entry is present. The existing local signing certificate was already trusted; no trust-store changes were made.
+- The same smoke suite passed through `%LOCALAPPDATA%\Microsoft\WindowsApps\mailmeup.exe`, preserving the alias path rather than resolving its reparse point.
+- The installed window and About & Support dialog were inspected visually. The banner, English text, website/repository/support/star links and installed version appeared; the copy button returned the expected version/platform summary. The isolated UI run created no account state and was closed after inspection.
+
+All current automated reads used synthetic `example.test` data or empty temporary directories with `MAILMEUP_DATA_DIR`; the owner's account registry and mailboxes were not used. Browser links were not opened. Live UI sign-in, Codex plugin installation, package upgrades, concurrent alias callers, clean-machine deployment and ARM64 runtime behavior remain untested.
+
+Earlier the same day, preview `0.1.1.2` was built and signed without installation or runtime tests. Compilation errors in the initial WinUI controls and a required alias manifest attribute were corrected before that first successful package build. The shared Hosting project and separate MSIX dependency graphs are included in the current source.
+
 **Windows x64, 2026-09-05. Pre-alpha and read-only.** Local automated checks use synthetic `example.test` data and isolated storage. Authorized live reads use local protected credentials; reports contain counts and outcomes only.
 
-## Current local results
+## Earlier CLI local results
 
 - Locked restore, formatting and Release build passed with zero warnings or errors.
 - **68 .NET tests passed:** storage, account isolation, failed reconnect, selective removal, transactional MSAL cache updates, credential locking/cancellation, partial reads, continuation limits and calendar boundaries.
@@ -12,7 +27,7 @@
 - The later unread/date-range mail tools, structured filters and default Spam/Junk plus Trash/Deleted exclusions are not covered by the validation runs recorded here.
 - Dependency inventory and repository data/link checks passed.
 
-## Current real-provider results
+## Earlier CLI real-provider results
 
 Both the development executable and the published Windows x64 executable from `de1fae7` passed **27 checks, with 0 failures and 3 skips** per run, across **two Google and two Microsoft accounts**:
 
@@ -25,7 +40,7 @@ These checks compare summaries with fetched details. They do **not** independent
 
 The manual runner is local-only: `python scripts/real-provider-check.py <path-to-mailmeup>`. It enumerates accounts, requires at least two and refuses recognized CI environments before process startup. Live checks are excluded from CI.
 
-At the owner's request, CI also skips unit-test execution. It retains build, formatting, isolated protocol smoke and repository checks. Local `scripts/validate.ps1` runs the unit suite unless `-SkipUnitTests` is supplied.
+At the owner's request, CI also skips unit-test execution. It retains build, read-only formatting verification, isolated protocol smoke and repository checks. Local `scripts/validate.ps1` applies style fixes before building and runs the unit suite unless `-SkipUnitTests` is supplied. The repository pre-commit hook applies the same formatter to staged C# files.
 
 ## Packaging and CI
 

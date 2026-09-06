@@ -21,6 +21,22 @@ public sealed class LoggingMailMeUpApplication(
         RunAsync("list_accounts", () => application.ListAccountsAsync(cancellationToken), cancellationToken);
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<Account>> ListSharedAccountsAsync(CancellationToken cancellationToken = default) =>
+        RunAsync("list_shared_accounts", () => application.ListSharedAccountsAsync(cancellationToken), cancellationToken);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<AccountSharingSettings>> ListAccountSharingAsync(CancellationToken cancellationToken = default) =>
+        RunAsync("list_account_sharing", () => application.ListAccountSharingAsync(cancellationToken), cancellationToken);
+
+    /// <inheritdoc />
+    public Task<AccountSharingSettings> SaveAccountSharingAsync(AccountSharingSettings settings, CancellationToken cancellationToken = default) =>
+        RunAsync("save_account_sharing", () => application.SaveAccountSharingAsync(settings, cancellationToken), cancellationToken);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ProviderCalendar>> ListAvailableCalendarsAsync(string accountId, CancellationToken cancellationToken = default) =>
+        RunAsync("discover_calendars_for_setup", () => application.ListAvailableCalendarsAsync(accountId, cancellationToken), cancellationToken);
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<ProviderSetupStatus>> ListProviderSetupAsync(CancellationToken cancellationToken = default) =>
         RunAsync("setup_status", () => application.ListProviderSetupAsync(cancellationToken), cancellationToken);
 
