@@ -46,7 +46,7 @@ The current source includes local provider setup, interactive multi-account sign
 
 *Example conversation with redacted addresses. MailMeUp searches selected accounts without modifying messages.*
 
-The current source passed 111 automated tests. Windows MSIX preview `0.1.1.3` is locally installed, its command alias passed MCP smoke checks, and its welcome/About window was inspected. The earlier CLI build also passed read-only checks across four real accounts. Clean-machine installation, upgrades, UI sign-in and the pilot remain. See the [validation record](docs/VALIDATION.md) and [account recovery guide](docs/RECOVERY.md).
+The current source passed 111 automated tests. Windows MSIX preview `0.1.1.4` is locally installed, its existing-registry startup and command alias passed smoke checks, and the preceding build's welcome/About window was inspected. The earlier CLI build also passed read-only checks across four real accounts. Clean-machine installation, UI sign-in and the pilot remain. See the [validation record](docs/VALIDATION.md) and [account recovery guide](docs/RECOVERY.md).
 
 ## AI assistant support
 

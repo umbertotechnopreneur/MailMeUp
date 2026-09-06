@@ -1,6 +1,6 @@
 # Active work
 
-- Windows MSIX `0.1.1.3` is locally installed; the About/banner UI was inspected and 111 .NET tests plus published/alias MCP smoke checks passed. Validate clean-machine deployment, additional DPI settings, Google/Microsoft UI sign-in and local Codex plugin installation next.
+- Windows MSIX `0.1.1.4` is locally installed as an upgrade; synthetic existing-registry startup, 111 .NET tests and published/alias MCP smoke checks passed. The preceding build's About/banner UI was inspected. Validate clean-machine deployment, additional DPI settings, Google/Microsoft UI sign-in and local Codex plugin installation next.
 - Exercise simultaneous installed-alias callers and an MSIX upgrade without changing the Codex command; redirected MCP stdio already passed on the installed alias.
 - Synthetic sharing and caller-notification regressions passed, including cached references and in-flight reads. Validate the corresponding live account scenarios only when requested.
 - Preserve the package identity and signing publisher across upgrades; do not publish or install on the owner's machine without a request.
