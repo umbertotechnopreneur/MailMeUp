@@ -20,7 +20,7 @@ internal sealed class MicrosoftAccessTokenProvider(IProviderConfigurationStore c
         }
 
         var configuration = await configurations.GetAsync("microsoft", cancellationToken)
-            ?? throw new ProviderReadException("Microsoft app setup is missing.");
+            ?? throw new ProviderReadException("Microsoft app setup is missing.", ReadFailureKind.SetupRequired);
         try
         {
             return await MicrosoftIdentitySession.RunAsync(
@@ -31,17 +31,17 @@ internal sealed class MicrosoftAccessTokenProvider(IProviderConfigurationStore c
                     var homeAccountId = account.Id[AccountIdPrefix.Length..];
                     var msalAccount = (await application.GetAccountsAsync())
                         .SingleOrDefault(item => string.Equals(item.HomeAccountId?.Identifier, homeAccountId, StringComparison.Ordinal))
-                        ?? throw new ProviderReadException("The Microsoft account credential is missing. Reconnect the account.");
+                        ?? throw new ProviderReadException("The Microsoft account credential is missing. Reconnect the account.", ReadFailureKind.SignInRequired);
                     try
                     {
                         var result = await application.AcquireTokenSilent(scopes, msalAccount).ExecuteAsync(cancellationToken);
                         return string.IsNullOrWhiteSpace(result.AccessToken)
-                            ? throw new ProviderReadException("Microsoft access expired. Reconnect the account.")
+                            ? throw new ProviderReadException("Microsoft access expired. Reconnect the account.", ReadFailureKind.SignInRequired)
                             : result.AccessToken;
                     }
                     catch (MsalUiRequiredException)
                     {
-                        throw new ProviderReadException("Microsoft access expired. Reconnect the account.");
+                        throw new ProviderReadException("Microsoft access expired. Reconnect the account.", ReadFailureKind.SignInRequired);
                     }
                 },
                 cancellationToken);
@@ -56,11 +56,15 @@ internal sealed class MicrosoftAccessTokenProvider(IProviderConfigurationStore c
         }
         catch (SecretStoreException)
         {
-            throw new ProviderReadException("The protected Microsoft credential could not be accessed. Check local credential storage.");
+            throw new ProviderReadException("The protected Microsoft credential could not be accessed. Check local credential storage.", ReadFailureKind.LocalCredentialsUnavailable);
+        }
+        catch (HttpRequestException)
+        {
+            throw new ProviderReadException("Microsoft authorization could not be reached.", ReadFailureKind.Network);
         }
         catch (Exception)
         {
-            throw new ProviderReadException("Microsoft authorization is temporarily unavailable. Try again later.");
+            throw new ProviderReadException("Microsoft authorization is temporarily unavailable. Try again later.", ReadFailureKind.ProviderUnavailable);
         }
     }
 }

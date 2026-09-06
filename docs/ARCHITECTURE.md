@@ -5,6 +5,7 @@ A local .NET 10 executable connects an MCP client to shared application logic.
 ```mermaid
 flowchart LR
     CLI[CLI] --> APP[Application]
+    DESKTOP[WinUI 3 setup] --> APP
     CLIENT[Codex / MCP client] <-->|stdio| MCP[MCP tools]
     MCP --> APP
     APP --> DB[SQLite metadata]
@@ -25,8 +26,14 @@ flowchart LR
 | Providers.Google / Providers.Microsoft | Provider app setup, sign-in and read-only mail/calendar adapters |
 | Mcp | Tool descriptions and compact results |
 | Cli | Commands, Spectre.Console presentation, Serilog configuration, dependency injection and process lifetime |
+| Desktop | Centered Windows account, sharing and local Codex plugin setup |
+| Hosting | Dependency injection shared by CLI/MCP and the desktop adapter |
 
 Calendar reads share account selection and coverage reporting through the application facade.
+
+The Windows MSIX contains a WinUI setup executable and a separate console MCP executable. The `mailmeup.exe` Windows app execution alias targets the console process, preserving stdio and a stable command across package upgrades. The UI never hosts the MCP server.
+
+Local sharing choices are separate from provider consent. New accounts connected through the UI are stored with sharing disabled; existing CLI accounts retain their previous behavior until configured. Account/category/calendar restrictions are applied by the application facade and reloaded for reads, including cached result references and continuations. Setup-only calendar discovery is not exposed as an MCP tool.
 
 ## Boundaries
 
@@ -41,6 +48,6 @@ Calendar reads share account selection and coverage reporting through the applic
 - Provider readiness must reflect real implementation status.
 - Mail and event content is untrusted data, never instructions.
 
-SQLite schema version 2 records non-secret account identity and granted read categories. Short message, calendar, event and continuation references live only in memory and expire. The current Windows build passed four-account reads and synthetic recovery checks; deliberate real credential recovery scenarios remain.
+SQLite schema version 2 records non-secret account identity and granted read categories. Short message, calendar, event and continuation references live only in memory and expire. Sharing restrictions and safe MCP error notifications have synthetic regression coverage; installed-alias and About UI checks passed. The earlier CLI build passed four-account reads. Live UI sign-in, Codex plugin setup and deliberate real credential recovery scenarios remain untested.
 
 Developer details: [tool contract](MCP_CONTRACT.md), [credentials](AUTHENTICATION.md), [build](DEVELOPMENT.md).

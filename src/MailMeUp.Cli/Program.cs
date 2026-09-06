@@ -1,4 +1,5 @@
 using MailMeUp.Cli;
+using MailMeUp.Hosting;
 using MailMeUp.Mcp;
 using MailMeUp.Storage;
 using Microsoft.Extensions.DependencyInjection;

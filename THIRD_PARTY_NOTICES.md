@@ -4,6 +4,8 @@ MailMeUp source is MIT-licensed. Dependencies retain their own licenses; MailMeU
 
 The exact restored CLI dependency inventory is in `docs/DEPENDENCIES.md` in source and `DEPENDENCIES.md` in portable packages. `scripts/export-notices.py` derives it from NuGet metadata and fails validation if it becomes stale.
 
+Windows MSIX packages additionally include the Windows App SDK / WinUI runtime. Their combined desktop and CLI inventory is generated during packaging as `licenses/DEPENDENCIES.md`, with each restored dependency's metadata and supplied license/notice texts under `licenses/packages/`. The portable CLI inventory does not describe those Windows UI dependencies.
+
 Included upstream license texts under `docs/licenses/` (or `licenses/` in a portable package) cover:
 
 - .NET runtime and Microsoft packages: MIT, with upstream third-party notices.

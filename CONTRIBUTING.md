@@ -5,8 +5,9 @@ MailMeUp currently welcomes focused foundation fixes and discussion of the next 
 1. Fork the repository and create a focused branch.
 2. Use .NET 10 from `global.json`, Python 3.10+ and PowerShell 7 for the validation scripts.
 3. Keep source, comments and documentation in English. Use synthetic mail data only.
-4. Run `pwsh -NoProfile -File scripts/validate.ps1`.
-5. Open a pull request describing the user-visible behavior, validation and limitations.
+4. Run `pwsh -NoProfile -File scripts/install-git-hooks.ps1` once per clone. The pre-commit hook formats staged C# files automatically.
+5. Run `pwsh -NoProfile -File scripts/validate.ps1`; local validation also applies style fixes before building.
+6. Open a pull request describing the user-visible behavior, validation and limitations.
 
 Do not include credentials, mailbox contents, token caches, local file paths from another user's machine or private provider configuration in issues or pull requests. New authentication code needs tests for account isolation, refresh races, revocation and unavailable credential storage.
 

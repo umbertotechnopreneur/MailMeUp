@@ -11,6 +11,18 @@ public interface IMailMeUpApplication
     /// <summary>Returns non-secret account metadata from the local registry.</summary>
     Task<IReadOnlyList<Account>> ListAccountsAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Returns only accounts shared with the assistant, with effective read categories.</summary>
+    Task<IReadOnlyList<Account>> ListSharedAccountsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Returns local sharing choices for all connected accounts; for local setup adapters only.</summary>
+    Task<IReadOnlyList<AccountSharingSettings>> ListAccountSharingAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves explicit local sharing choices independently of provider consent; for local setup adapters only.</summary>
+    Task<AccountSharingSettings> SaveAccountSharingAsync(AccountSharingSettings settings, CancellationToken cancellationToken = default);
+
+    /// <summary>Discovers calendar names for local setup even before assistant sharing is enabled; never expose as an MCP tool.</summary>
+    Task<IReadOnlyList<ProviderCalendar>> ListAvailableCalendarsAsync(string accountId, CancellationToken cancellationToken = default);
+
     /// <summary>Reports local provider app registration readiness without returning credentials.</summary>
     Task<IReadOnlyList<ProviderSetupStatus>> ListProviderSetupAsync(CancellationToken cancellationToken = default);
 

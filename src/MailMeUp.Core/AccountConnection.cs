@@ -1,7 +1,7 @@
 namespace MailMeUp.Core;
 
 /// <summary>Selects the read-only data categories requested during account consent.</summary>
-public sealed record AccountConnectionOptions(bool IncludeMail = true, bool IncludeCalendar = true)
+public sealed record AccountConnectionOptions(bool IncludeMail = true, bool IncludeCalendar = true, bool ShareWithAssistant = true)
 {
     /// <summary>Ensures that the sign-in requests at least one useful read capability.</summary>
     public void Validate()

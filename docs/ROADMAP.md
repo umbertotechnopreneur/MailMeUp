@@ -15,6 +15,6 @@ For the practical steps and completion checks, see the [MVP delivery plan](MVP_P
 
 Each step needs working tests before it is advertised as available.
 
-The current Windows build passed real reads across four accounts and synthetic recovery, partial-failure and calendar boundary tests. Next: clean installation, deliberate real recovery scenarios and a small pilot.
+The current source passed 111 synthetic tests. Step 4 includes an installed Windows MSIX / WinUI 3 preview, a generated About banner and GitHub support links; the installed alias passed MCP smoke checks. The earlier CLI build passed real reads across four accounts. Next: clean-machine installation, upgrades, UI sign-in/Codex plugin setup, deliberate real recovery scenarios and a small pilot.
 
-No marketplace, web dashboard or hosted service is planned.
+A bundled local Codex plugin is included in the Windows setup scope. No public marketplace publication, web dashboard or hosted service is planned.

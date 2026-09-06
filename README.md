@@ -46,9 +46,11 @@ The current source includes local provider setup, interactive multi-account sign
 
 *Example conversation with redacted addresses. MailMeUp searches selected accounts without modifying messages.*
 
-The Windows build passed 68 automated tests and read-only checks across four real accounts. Recovery, partial results and calendar boundaries have synthetic regression coverage; clean installation and the pilot remain. See the [validation record](docs/VALIDATION.md) and [account recovery guide](docs/RECOVERY.md).
+The current source passed 111 automated tests. Windows MSIX preview `0.1.1.3` is locally installed, its command alias passed MCP smoke checks, and its welcome/About window was inspected. The earlier CLI build also passed read-only checks across four real accounts. Clean-machine installation, upgrades, UI sign-in and the pilot remain. See the [validation record](docs/VALIDATION.md) and [account recovery guide](docs/RECOVERY.md).
 
 ## AI assistant support
+
+The Windows setup preview adds a centered WinUI 3 wizard for accounts, sharing choices and a local Codex plugin. The MSIX declares a stable command alias so updates do not require a new executable path. See [Windows setup and packaging](docs/WINDOWS_SETUP.md) for its current validation limits.
 
 Development currently focuses only on OpenAI's Codex. MailMeUp uses the standard Model Context Protocol (MCP) over stdio, so it may also work with other compatible clients, including Claude. Claude compatibility has not been tested.
 
@@ -56,7 +58,7 @@ Contributors interested in Claude are welcome to help with compatibility testing
 
 ## Platform status
 
-- **Windows x64:** current MVP target; the packaged executable is tested before and after ZIP extraction.
+- **Windows x64:** current MVP target; the MSIX preview was built, signed and locally installed, with alias and About UI checks passed. Clean-machine installation and upgrade checks remain.
 - **Windows ARM64:** package builds, but has not been executed on ARM64 hardware.
 - **macOS and Linux:** not tested, including browser OAuth sign-in and protected token storage. Support is not claimed for the current MVP.
 

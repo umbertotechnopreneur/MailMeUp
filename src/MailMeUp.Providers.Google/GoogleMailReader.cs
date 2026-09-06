@@ -86,6 +86,10 @@ public sealed class GoogleMailReader : IMailReader
         {
             throw;
         }
+        catch (HttpRequestException)
+        {
+            throw new ProviderReadException("The provider could not be reached.", ReadFailureKind.Network);
+        }
         catch (Exception)
         {
             throw new ProviderReadException("Gmail search failed.");
@@ -128,6 +132,10 @@ public sealed class GoogleMailReader : IMailReader
         catch (ProviderReadException)
         {
             throw;
+        }
+        catch (HttpRequestException)
+        {
+            throw new ProviderReadException("The provider could not be reached.", ReadFailureKind.Network);
         }
         catch (Exception)
         {
@@ -212,7 +220,7 @@ public sealed class GoogleMailReader : IMailReader
         using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new ProviderReadException("Gmail returned an unsuccessful response.");
+            throw new ProviderReadException("Gmail returned an unsuccessful response.", ClassifyHttpFailure((int)response.StatusCode));
         }
 
         if (response.Content.Headers.ContentLength is > MaximumJsonBytes)
@@ -387,4 +395,13 @@ public sealed class GoogleMailReader : IMailReader
             throw new ArgumentException("The Gmail message identifier is invalid.", nameof(messageId));
         }
     }
+    private static ReadFailureKind ClassifyHttpFailure(int statusCode) => statusCode switch
+    {
+        401 => ReadFailureKind.SignInRequired,
+        403 => ReadFailureKind.AccessDenied,
+        404 or 410 => ReadFailureKind.ItemUnavailable,
+        408 or 504 => ReadFailureKind.Timeout,
+        429 or >= 500 => ReadFailureKind.ProviderUnavailable,
+        _ => ReadFailureKind.Unknown
+    };
 }

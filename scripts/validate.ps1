@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$SkipUnitTests
+    [switch]$SkipUnitTests,
+    [switch]$CheckFormatting
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,8 +11,11 @@ Push-Location $repoRoot
 try {
     dotnet restore MailMeUp.slnx --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
-    dotnet format MailMeUp.slnx --no-restore --verify-no-changes
-    if ($LASTEXITCODE -ne 0) { throw 'Formatting check failed.' }
+    if ($CheckFormatting) {
+        & (Join-Path $PSScriptRoot 'format.ps1') -Check -NoRestore
+    } else {
+        & (Join-Path $PSScriptRoot 'format.ps1') -NoRestore
+    }
     dotnet build MailMeUp.slnx -c Release --no-restore
     if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
     if (-not $SkipUnitTests) {

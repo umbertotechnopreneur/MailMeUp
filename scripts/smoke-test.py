@@ -21,7 +21,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
     args = parser.parse_args()
-    executable = args.executable.resolve(strict=True)
+    # Keep an MSIX execution alias intact: resolving its reparse point would bypass the launch route being tested.
+    executable = Path(os.path.abspath(args.executable))
     command = ["dotnet", str(executable)] if executable.suffix == ".dll" else [str(executable)]
 
     with tempfile.TemporaryDirectory(prefix="mailmeup-smoke-") as directory:
@@ -157,6 +158,12 @@ def main():
                 rejected = receive(identifier)
                 check("error" in rejected or rejected.get("result", {}).get("isError", False),
                       f"Invalid reference was accepted by {name}")
+                failure = rejected.get("result", {})
+                failure_payload = failure.get("structuredContent") or json.loads(failure["content"][0]["text"])
+                notification = failure_payload["user_notification"]
+                check(notification["required"] is True and "tell the user" in notification["instruction"].lower(),
+                      f"Missing caller notification for {name}")
+                check("MailMeUp plugin" in notification["message"], f"Missing plain-English plugin failure for {name}")
         finally:
             process.stdin.close()
             try:

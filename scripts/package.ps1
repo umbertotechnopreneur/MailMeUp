@@ -29,7 +29,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect Git state.' }
     if ($dirty) { throw 'Commit or move aside repository changes before packaging. Artifacts are ignored.' }
     $runtimeLocks = Join-Path $repoRoot "eng/locks/$Runtime"
-    foreach ($module in Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src') -Directory) {
+    foreach ($module in Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src') -Directory | Where-Object Name -ne 'MailMeUp.Desktop') {
         if (-not (Test-Path -LiteralPath (Join-Path $runtimeLocks "$($module.Name).json"))) { throw "Missing portable dependency graph for $($module.Name)." }
     }
 

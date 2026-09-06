@@ -22,10 +22,10 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
         }
 
         var configuration = await configurations.GetAsync("google", cancellationToken)
-            ?? throw new ProviderReadException("Google app setup is missing.");
+            ?? throw new ProviderReadException("Google app setup is missing.", ReadFailureKind.SetupRequired);
         if (string.IsNullOrWhiteSpace(configuration.ClientSecretReference))
         {
-            throw new ProviderReadException("The protected Google client credential is missing.");
+            throw new ProviderReadException("The protected Google client credential is missing.", ReadFailureKind.LocalCredentialsUnavailable);
         }
 
         byte[]? secretBytes = null;
@@ -33,7 +33,7 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
         {
             using var session = await GoogleCredentialSession.AcquireAsync(secrets, account.Id, cancellationToken);
             secretBytes = await secrets.ReadAsync(configuration.ClientSecretReference, cancellationToken)
-                ?? throw new ProviderReadException("The protected Google client credential is missing.");
+                ?? throw new ProviderReadException("The protected Google client credential is missing.", ReadFailureKind.LocalCredentialsUnavailable);
             var tokenStore = new ProtectedGoogleTokenStore(secrets, account.Id, cancellationToken);
             using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
@@ -46,11 +46,11 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
                 DataStore = tokenStore
             });
             var token = await flow.LoadTokenAsync(account.Id, cancellationToken)
-                ?? throw new ProviderReadException("The Google account credential is missing. Reconnect the account.");
+                ?? throw new ProviderReadException("The Google account credential is missing. Reconnect the account.", ReadFailureKind.SignInRequired);
             var credential = new UserCredential(flow, account.Id, token);
             var accessToken = await credential.GetAccessTokenForRequestAsync(null, cancellationToken);
             return string.IsNullOrWhiteSpace(accessToken)
-                ? throw new ProviderReadException("Google access expired. Reconnect the account.")
+                ? throw new ProviderReadException("Google access expired. Reconnect the account.", ReadFailureKind.SignInRequired)
                 : accessToken;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -64,15 +64,19 @@ internal sealed class GoogleAccessTokenProvider(IProviderConfigurationStore conf
         catch (TokenResponseException exception) when (
             string.Equals(exception.Error?.Error, "invalid_grant", StringComparison.Ordinal))
         {
-            throw new ProviderReadException("Google authorization expired or was revoked. Reconnect the account.");
+            throw new ProviderReadException("Google authorization expired or was revoked. Reconnect the account.", ReadFailureKind.SignInRequired);
         }
         catch (SecretStoreException)
         {
-            throw new ProviderReadException("The protected Google credential could not be accessed. Check local credential storage.");
+            throw new ProviderReadException("The protected Google credential could not be accessed. Check local credential storage.", ReadFailureKind.LocalCredentialsUnavailable);
+        }
+        catch (HttpRequestException)
+        {
+            throw new ProviderReadException("Google authorization could not be reached.", ReadFailureKind.Network);
         }
         catch (Exception)
         {
-            throw new ProviderReadException("Google authorization is temporarily unavailable. Try again later.");
+            throw new ProviderReadException("Google authorization is temporarily unavailable. Try again later.", ReadFailureKind.ProviderUnavailable);
         }
         finally
         {

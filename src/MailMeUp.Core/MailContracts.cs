@@ -35,7 +35,7 @@ public sealed record MailSearchItem(
     bool HasAttachments = false);
 
 /// <summary>Identifies an account that could not be covered by a multi-account read.</summary>
-public sealed record AccountReadFailure(string AccountId, string Reason);
+public sealed record AccountReadFailure(string AccountId, string Reason, ReadFailureKind Kind = ReadFailureKind.Unknown);
 
 /// <summary>Returns compact matches, search coverage and an optional short continuation cursor.</summary>
 public sealed record MailSearchResult(
@@ -114,8 +114,12 @@ public interface IMailReader
 public sealed class ProviderReadException : Exception
 {
     /// <summary>Creates a sanitized provider read failure.</summary>
-    public ProviderReadException(string message)
+    public ProviderReadException(string message, ReadFailureKind kind = ReadFailureKind.Unknown)
         : base(message)
     {
+        Kind = kind;
     }
+
+    /// <summary>Gets a safe category for user guidance; exception messages are never forwarded to the assistant.</summary>
+    public ReadFailureKind Kind { get; }
 }

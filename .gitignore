@@ -4,6 +4,7 @@
 .idea/
 .DS_Store
 Thumbs.db
+desktop.ini
 artifacts/
 TestResults/
 .local/
