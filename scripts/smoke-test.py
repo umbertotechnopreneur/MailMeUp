@@ -30,7 +30,8 @@ def main():
         environment = {**os.environ, "MAILMEUP_DATA_DIR": registry, "MAILMEUP_LOG_LEVEL": "warning",
                        "DOTNET_CLI_UI_LANGUAGE": "en"}
         for cli_args in (["--help"], ["--version"], ["status"], ["accounts", "list"], ["setup", "status"]):
-            result = subprocess.run(command + cli_args, env=environment, capture_output=True, text=True, timeout=30, check=True)
+            result = subprocess.run(command + cli_args, env=environment, capture_output=True, text=True,
+                                    encoding="utf-8", timeout=30, check=True)
             check(bool(result.stdout.strip()), f"Empty output for {cli_args}")
             check(not result.stderr, f"Unexpected default diagnostics for {cli_args}")
             check("\x1b" not in result.stdout, f"ANSI escapes in redirected output for {cli_args}")
@@ -48,19 +49,22 @@ def main():
                 providers = json.loads(result.stdout)["providers"]
                 check({provider["provider_id"] for provider in providers} == {"google", "microsoft"}, "Unexpected setup providers")
                 check(all(not provider["configured"] for provider in providers), "Fresh setup should be empty")
-        invalid = subprocess.run(command + ["unknown"], env=environment, capture_output=True, text=True, timeout=30)
+        invalid = subprocess.run(command + ["unknown"], env=environment, capture_output=True, text=True,
+                                 encoding="utf-8", timeout=30)
         check(invalid.returncode == 2 and not invalid.stdout, "Unknown commands must fail on stderr")
 
         for cli_args in (["--stdio", "--json"], ["status", "--log-level"], ["status", "--log-level", "0"],
                          ["accounts", "connect", "google", "--mail-only", "--calendar-only"],
                          ["setup", "status", "--calendar-only"], ["status", "--json", "--json"],
                          ["accounts", "remove", "--unknown"]):
-            rejected = subprocess.run(command + cli_args, env=environment, capture_output=True, text=True, timeout=30)
+            rejected = subprocess.run(command + cli_args, env=environment, capture_output=True, text=True,
+                                      encoding="utf-8", timeout=30)
             check(rejected.returncode == 2 and not rejected.stdout and rejected.stderr,
                   f"Invalid options must fail before executing: {cli_args}")
 
         explicit_json = subprocess.run(command + ["--no-color", "accounts", "list", "--json", "--log-level", "debug"],
-                                       env=environment, capture_output=True, text=True, timeout=30, check=True)
+                                       env=environment, capture_output=True, text=True, encoding="utf-8",
+                                       timeout=30, check=True)
         check(json.loads(explicit_json.stdout) == {"accounts": []}, "Explicit JSON shape changed")
         check("list_accounts" in explicit_json.stderr and "DBG" in explicit_json.stderr,
               "Serilog did not emit application diagnostics to stderr")
@@ -68,12 +72,12 @@ def main():
 
         level_override = subprocess.run(command + ["status", "--json", "--log-level", "warning"],
                                         env={**environment, "MAILMEUP_LOG_LEVEL": "invalid"},
-                                        capture_output=True, text=True, timeout=30, check=True)
+                                        capture_output=True, text=True, encoding="utf-8", timeout=30, check=True)
         check(json.loads(level_override.stdout)["read_only"] and not level_override.stderr,
               "Command-line log level did not override the environment")
         private_path = str(Path(directory) / "private-input-sentinel@example.test.json")
         failed_setup = subprocess.run(command + ["setup", "google", private_path, "--log-level", "verbose"],
-                                      env=environment, capture_output=True, text=True, timeout=30)
+                                      env=environment, capture_output=True, text=True, encoding="utf-8", timeout=30)
         check(failed_setup.returncode == 1 and not failed_setup.stdout and failed_setup.stderr,
               "Missing setup input did not fail cleanly")
         check("private-input-sentinel" not in failed_setup.stderr and private_path not in failed_setup.stderr,
